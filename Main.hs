@@ -120,9 +120,7 @@ module Main where
   moveEnemy w e = do
     dir <- randChoice [Up, Down, Left, Right]
     let newCoord = (flipCoord (getVect dir) |+| (eCoord e))
-    debug ("New: " ++ show newCoord)
-    debug ("Old: " ++ show (eCoord e))
-    return e { eCoord = if (isImpassible (tileMap w) (newCoord)) then (flipCoord (eCoord e)) else newCoord, eOldCoord = (eOldCoord e) }
+    return e { eCoord = if (isImpassible (tileMap w) (newCoord)) then (eCoord e) else newCoord, eOldCoord = (eOldCoord e) }
 
   moveEnemies :: World -> [Enemy] -> IO [Enemy]
   moveEnemies w es = mapM (moveEnemy w) es
@@ -157,6 +155,7 @@ module Main where
   handleEvent :: World -> Event -> IO ()
   handleEvent w (Dir d) = do
     ems <- moveEnemies w (wEnemies w)
+    debug (show newHCoord)
     gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
     where
       oldH = hCoord (wHero w)
@@ -251,7 +250,7 @@ module Main where
     hideCursor
     setTitle "Vauxhall"
     clearScreen
-    let w = World { wHero = Hero {hCoord = (1, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, items = []}, 
+    let w = World { wHero = Hero {hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, items = []}, 
                     walls = wall1,
                     tileMap = wall1Mapped,
                     wEnemies=[Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
