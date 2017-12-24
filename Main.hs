@@ -6,13 +6,31 @@ module Main where
   import qualified Data.Map.Strict as M
   import Types
 
+  {- Written By Henning Tonko ☭ -}
+
+  {-
+  TODO:
+    [X] Add money
+    [] Keep enemy within impassible objects (Check coords and make sure they are both correct)
+    [] Implement Enemy and Player attacking
+    [] Equip/De-Equip items
+    [] Leveling/Classes/Attributes
+    [X] Way to check player status (To right side of map)
+    [] Up/Down Staircases
+    [] Score displayed at end/death
+        - Killing enemies
+        - Picking up items
+        - Picking up gold
+    [] Hunger System
+  -}
+
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
-           "|            s        |     |        |",
-           "|               O     ---|---        |",
+           "|<           s        |     |    >   |",
+           "|               O     ---|---    $   |",
            "|          p             +           |",
-           "|                     ---|---        |",
-           "|                     |     |        |",
+           "|                 $   ---|---        |",
+           "|       $             |     | $      |",
            "-----------------------     ----------"]
 
   {-
@@ -34,7 +52,7 @@ module Main where
   dConst = (-1, 1)
 
   debug :: String -> IO ()
-  debug s = appendFile "test.txt" s
+  debug s = appendFile "test.txt" (s ++ "\n")
 
   flipCoord :: Coord -> Coord
   flipCoord (x, y) = (y, x)
@@ -43,6 +61,7 @@ module Main where
   getItem 's' = Sword
   getItem 'O' = Shield
   getItem 'p' = Potion
+  getItem '$' = Coin
   getItem _ = Null
 
   getVect :: Direction -> Coord
@@ -100,8 +119,10 @@ module Main where
   moveEnemy :: World -> Enemy -> IO Enemy
   moveEnemy w e = do
     dir <- randChoice [Up, Down, Left, Right]
-    let newCoord = (getVect dir) |+| (eCoord e)
-    return e { eCoord = if (isImpassible (tileMap w) newCoord) then newCoord else eCoord e, eOldCoord = flipCoord $ eCoord e }
+    let newCoord = (flipCoord (getVect dir) |+| (eCoord e))
+    debug ("New: " ++ show newCoord)
+    debug ("Old: " ++ show (eCoord e))
+    return e { eCoord = if (isImpassible (tileMap w) (newCoord)) then (flipCoord (eCoord e)) else newCoord, eOldCoord = (eOldCoord e) }
 
   moveEnemies :: World -> [Enemy] -> IO [Enemy]
   moveEnemies w es = mapM (moveEnemy w) es
@@ -144,7 +165,7 @@ module Main where
                    Right -> (0, 1) |+| oldH
                    Up -> (-1, 0) |+| oldH
                    Down -> (1, 0) |+| oldH
-      newH = Hero { hCoord = newHCoord, hOldCoord = oldH, hHealth = hHealth (wHero w), items = items (wHero w)}
+      newH = (wHero w) { hCoord = newHCoord, hOldCoord = oldH, hHealth = hHealth (wHero w), items = items (wHero w)}
   handleEvent w (PlayerAction OpenDoor) = do
     dir <- getInput
     let t = case dir of
@@ -195,14 +216,28 @@ module Main where
 
   drawEnemies :: [Enemy] -> IO ()
   drawEnemies e
-    | length e == 1 = do {setCursorPosition (fst (eCoord (head e))) (snd (eCoord (head e))); putChar 'M'; setCursorPosition (fst (eOldCoord (head e))) (snd (eOldCoord (head e))); putChar ' '}
-    | otherwise = do {setCursorPosition (fst (eCoord (head e))) (snd (eCoord (head e))); putChar 'M'; setCursorPosition (fst (eOldCoord (head e))) (snd (eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
+    | length e == 1 = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'}
+    | otherwise = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
+
+  drawStats :: Hero -> IO ()
+  drawStats h = do
+    setCursorPosition 0 50
+    putStrLn "Player Stats"
+    setCursorPosition 1 50
+    putStrLn "============"
+    setCursorPosition 2 50
+    putStrLn ("Health: " ++ show (hHealth h))
+    setCursorPosition 3 50
+    putStrLn ("Exp: " ++ show (hExp h))
+    setCursorPosition 4 50
+    putStrLn ("Level: " ++ show (hLvl h))
 
   drawWorld :: World -> IO ()
   drawWorld w = do
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (wEnemies w)
+    drawStats (wHero w)
     setCursorPosition (fst $ hOldCoord (wHero w)) (snd $ hOldCoord (wHero w))
     putChar ' '
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
@@ -216,10 +251,10 @@ module Main where
     hideCursor
     setTitle "Vauxhall"
     clearScreen
-    let w = World { wHero = Hero {hCoord = (1, 1), hOldCoord = (30, 0), hHealth = 10, items = []}, 
+    let w = World { wHero = Hero {hCoord = (1, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, items = []}, 
                     walls = wall1,
                     tileMap = wall1Mapped,
-                    wEnemies=[Enemy {eCoord = (3, 33), eOldCoord = (0,0), eHealth = 10}]
+                    wEnemies=[Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
                   }
     drawWorld w
     gameLoop w

@@ -3,12 +3,13 @@ module Types where
 
   type Coord = (Int, Int)
 
-  data Item = Sword | Shield | Potion | Null
+  data Item = Sword | Shield | Potion | Coin | Null
 
   instance Show Item where
     show Sword = "Sword"
     show Shield = "Shield"
     show Potion = "Potion"
+    show Coin = "Coin"
     show Null = "Null"
 
   data World = World {
@@ -28,6 +29,8 @@ module Types where
                 hCoord :: Coord,
                 hOldCoord :: Coord,
                 hHealth :: Int,
+                hExp :: Int,
+                hLvl :: Int,
                 items :: [Item]
               } deriving Show
 
