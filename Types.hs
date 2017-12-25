@@ -12,6 +12,32 @@ module Types where
     show Coin = "Coin"
     show Null = "Null"
 
+  data Class = Knight {
+                kConst :: Int,
+                kStr :: Int,
+                kDex :: Int,
+                kInt :: Int
+               }
+               |
+               Thief {
+                tConst :: Int,
+                tStr :: Int,
+                tDex :: Int,
+                tInt :: Int
+               }
+               |
+               Sub {
+                sConst :: Int,
+                sStr :: Int,
+                sDex :: Int,
+                sInt :: Int
+               }
+
+  instance Show Class where
+    show (Knight _ _ _ _) = "Knight"
+    show (Thief _ _ _ _) = "Thief"
+    show (Sub _ _ _ _) = "Sub"
+
   data World = World {
                 wHero :: Hero,
                 walls :: [String],
@@ -31,6 +57,7 @@ module Types where
                 hHealth :: Int,
                 hExp :: Int,
                 hLvl :: Int,
+                hClass :: Class,
                 items :: [Item]
               } deriving Show
 
