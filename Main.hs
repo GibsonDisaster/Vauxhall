@@ -11,7 +11,7 @@ module Main where
   {-
   TODO:
     [X] Add money
-    [] Keep enemy within impassible objects (Check coords and make sure they are both correct)
+    [X] Keep enemy within impassible objects (Check coords and make sure they are both correct)
     [] Implement Enemy and Player attacking
     [] Equip/De-Equip items
     [] Leveling/Classes/Attributes
@@ -50,6 +50,15 @@ module Main where
 
   dConst :: Coord
   dConst = (-1, 1)
+
+  knight :: Class
+  knight = Knight {kConst = 15, kStr = 4, kDex = 7, kInt = 3}
+
+  thief :: Class
+  thief = Thief {tConst = 8, tStr = 3, tDex = 10, tInt = 6}
+
+  sub :: Class
+  sub = Sub {sConst = 10, sStr = 2, sDex = 15, sInt = 1}
 
   debug :: String -> IO ()
   debug s = appendFile "test.txt" (s ++ "\n")
@@ -225,10 +234,12 @@ module Main where
     setCursorPosition 1 50
     putStrLn "============"
     setCursorPosition 2 50
-    putStrLn ("Health: " ++ show (hHealth h))
+    putStrLn ("Class: " ++ show (hClass h)) 
     setCursorPosition 3 50
-    putStrLn ("Exp: " ++ show (hExp h))
+    putStrLn ("Health: " ++ show (hHealth h))
     setCursorPosition 4 50
+    putStrLn ("Exp: " ++ show (hExp h))
+    setCursorPosition 5 50
     putStrLn ("Level: " ++ show (hLvl h))
 
   drawWorld :: World -> IO ()
@@ -241,6 +252,8 @@ module Main where
     putChar ' '
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
     putChar '@'
+    setCursorPosition 0 0
+    putChar '-'
 
   main :: IO ()
   main = do
@@ -250,7 +263,7 @@ module Main where
     hideCursor
     setTitle "Vauxhall"
     clearScreen
-    let w = World { wHero = Hero {hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, items = []}, 
+    let w = World { wHero = Hero {hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = []}, 
                     walls = wall1,
                     tileMap = wall1Mapped,
                     wEnemies=[Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
