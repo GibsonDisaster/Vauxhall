@@ -33,6 +33,18 @@ module Main where
            "|       $             |     | $      |",
            "-----------------------     ----------"]
 
+  wall2 :: [String]
+  wall2 = ["--------------------------------------",
+           "|>                    |$$$$$|    <   |",
+           "|                     ---+---        |",
+           "|                                    |",
+           "|                                    |",
+           "|                                    |",
+           "--------------------------------------"]
+
+  wallsList :: M.Map String [String]
+  wallsList = M.insert "wall2" wall2 (M.insert "wall1" wall1 M.empty)
+
   {-
   Constants that must be used when determining a position
   because of ANSI's insane coordinate system.
@@ -88,8 +100,24 @@ module Main where
                                      '+' -> True
                                      _ -> False
 
+  getNextLvl :: String -> String
+  getNextLvl lvl = "wall" ++ show nextNum
+    where
+      nextNum = (read (drop 4 lvl) :: Int) + 1
+
+  getLastLvl :: String -> String
+  getLastLvl lvl = "wall" ++ show lastNum
+    where
+      lastNum = (read (drop 4 lvl) :: Int) - 1
+
   wall1Mapped :: M.Map Coord Char
   wall1Mapped = foldl M.union M.empty $ mapWorld wall1 0
+
+  wall2Mapped :: M.Map Coord Char
+  wall2Mapped = foldl M.union M.empty $ mapWorld wall2 0
+
+  mapWalls :: [String] -> M.Map Coord Char
+  mapWalls walls = foldl M.union M.empty $ mapWorld walls 0
 
   mapLevel :: M.Map Coord Char -> Int -> Int -> String -> M.Map Coord Char
   mapLevel m x y str
@@ -151,6 +179,8 @@ module Main where
       'c' -> return (PlayerAction CloseDoor)
       ',' -> return (PlayerAction PickUp)
       'i' -> return (PlayerAction ShowInv)
+      '>' -> return (PlayerAction GoDown)
+      '<' -> return (PlayerAction GoUp)
       _   -> getInput
 
   handleExit :: IO ()
@@ -164,7 +194,6 @@ module Main where
   handleEvent :: World -> Event -> IO ()
   handleEvent w (Dir d) = do
     ems <- moveEnemies w (wEnemies w)
-    debug (show newHCoord)
     gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
     where
       oldH = hCoord (wHero w)
@@ -208,6 +237,26 @@ module Main where
     setCursorPosition 0 0
     mapM_ (\_ -> putStrLn "               ") (map show $ items (wHero w))
     gameLoop w
+  handleEvent w (PlayerAction GoDown) = do
+    let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
+             Nothing -> ' '
+             Just c -> c
+    let nextStr = getNextLvl (currentLvl w)
+    let nextWalls = case M.lookup nextStr wallsList of
+                     Nothing -> (walls w)
+                     Just ch -> ch
+    let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls } else w
+    gameLoop w'
+  handleEvent w (PlayerAction GoUp) = do
+    let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
+              Nothing -> ' '
+              Just c -> c
+    let nextStr = getLastLvl (currentLvl w)
+    let lastWalls = case M.lookup nextStr wallsList of
+                      Nothing -> (walls w)
+                      Just ch -> ch
+    let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls } else w
+    gameLoop w'
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -265,6 +314,7 @@ module Main where
     clearScreen
     let w = World { wHero = Hero {hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = []}, 
                     walls = wall1,
+                    currentLvl = "wall1",
                     tileMap = wall1Mapped,
                     wEnemies=[Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
                   }
