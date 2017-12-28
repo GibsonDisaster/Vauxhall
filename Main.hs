@@ -3,6 +3,7 @@ module Main where
   import System.Console.ANSI
   import System.IO
   import System.Random
+  import System.Environment (getArgs)
   import qualified Data.Map.Strict as M
   import Types
 
@@ -13,14 +14,17 @@ module Main where
     [X] Add money
     [X] Keep enemy within impassible objects (Check coords and make sure they are both correct)
     [] Implement Enemy and Player attacking
-    [] Equip/De-Equip items
+    [?] Equip/De-Equip items
     [] Leveling/Classes/Attributes
     [X] Way to check player status (To right side of map)
-    [] Up/Down Staircases
+    [X] Up/Down Staircases
+        - Specific enemies for each floor []
+    [] Clean up code!!!!
+    [X] Score kept throughout game 
     [] Score displayed at end/death
-        - Killing enemies
-        - Picking up items
-        - Picking up gold
+        - Killing enemies []
+        - Picking up items [X]
+        - Picking up gold [X]
     [] Hunger System
   -}
 
@@ -42,8 +46,17 @@ module Main where
            "|                                    |",
            "--------------------------------------"]
 
+  wall3 :: [String]
+  wall3 = ["--------------------------------------",
+           "|<            ~~~~~                  |",
+           "|               ~~~~                 |",
+           "|                ~~~~                |",
+           "|                 ~~~~~              |",
+           "|                 ~~~~~~~~           |",
+           "--------------------------------------"]
+
   wallsList :: M.Map String [String]
-  wallsList = M.insert "wall2" wall2 (M.insert "wall1" wall1 M.empty)
+  wallsList = M.insert "wall3" wall3 (M.insert "wall2" wall2 (M.insert "wall1" wall1 M.empty))
 
   {-
   Constants that must be used when determining a position
@@ -64,13 +77,13 @@ module Main where
   dConst = (-1, 1)
 
   knight :: Class
-  knight = Knight {kConst = 15, kStr = 4, kDex = 7, kInt = 3}
+  knight = Knight { kConst = 15, kStr = 4, kDex = 7, kInt = 3 }
 
   thief :: Class
-  thief = Thief {tConst = 8, tStr = 3, tDex = 10, tInt = 6}
+  thief = Thief { tConst = 8, tStr = 3, tDex = 10, tInt = 6 }
 
   sub :: Class
-  sub = Sub {sConst = 10, sStr = 2, sDex = 15, sInt = 1}
+  sub = Sub { sConst = 10, sStr = 2, sDex = 15, sInt = 1 }
 
   debug :: String -> IO ()
   debug s = appendFile "test.txt" (s ++ "\n")
@@ -134,6 +147,9 @@ module Main where
 
   (|-|) :: Coord -> Coord -> Coord
   (|-|) (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
+
+  dropQuotes :: String -> String
+  dropQuotes str = (drop 1 . reverse . drop 1 . reverse) str
 
   isThatChar :: Coord -> Char -> M.Map Coord Char -> Bool
   isThatChar c ch m = case M.lookup c m of
@@ -225,7 +241,7 @@ module Main where
     let i = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
              Nothing -> ' '
              Just c -> c
-    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i] }
+    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1) }
     let oldHero = (wHero w)
     gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then oldHero else newHero }
   handleEvent w (PlayerAction ShowInv) = do
@@ -236,6 +252,8 @@ module Main where
     _ <- getInput
     setCursorPosition 0 0
     mapM_ (\_ -> putStrLn "               ") (map show $ items (wHero w))
+    putStrLn "                 "
+    putStrLn "                 "
     gameLoop w
   handleEvent w (PlayerAction GoDown) = do
     let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
@@ -290,6 +308,12 @@ module Main where
     putStrLn ("Exp: " ++ show (hExp h))
     setCursorPosition 5 50
     putStrLn ("Level: " ++ show (hLvl h))
+    setCursorPosition 0 75
+    putStrLn ((hName h) ++ "\'s Score")
+    setCursorPosition 1 75
+    putStrLn "============"
+    setCursorPosition 2 75
+    putStrLn (show (hScore h) ++ " pts")
 
   drawWorld :: World -> IO ()
   drawWorld w = do
@@ -311,8 +335,9 @@ module Main where
     hSetBuffering stdout NoBuffering
     hideCursor
     setTitle "Vauxhall"
+    name <- head <$> getArgs
     clearScreen
-    let w = World { wHero = Hero {hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = []}, 
+    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = [], hScore = 0 }, 
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = wall1Mapped,

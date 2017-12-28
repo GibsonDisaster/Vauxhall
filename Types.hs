@@ -53,13 +53,15 @@ module Types where
                } deriving Show
 
   data Hero = Hero {
+                hName :: String,
                 hCoord :: Coord,
                 hOldCoord :: Coord,
                 hHealth :: Int,
                 hExp :: Int,
                 hLvl :: Int,
                 hClass :: Class,
-                items :: [Item]
+                items :: [Item],
+                hScore :: Int
               } deriving Show
 
   data Direction = Up | Down | Left | Right deriving Show

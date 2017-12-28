@@ -1,7 +1,10 @@
 # Vauxhall
 
 ## How To Play
-Enter the directory containing the Vauxhall binary file and run it using "./Vauxhall"
+1) Enter the directory containing the Vauxhall binary file
+2) Run it using "./Vauxhall Name" (Substituting "Name" for your players name)
+
+Play with your Terminal window in fullscreen to avoid rendering issues
 
 ## Keys
 * wasd or hjkl - movement
