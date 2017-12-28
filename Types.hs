@@ -66,6 +66,6 @@ module Types where
 
   data Direction = Up | Down | Left | Right deriving Show
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | ShowInv | Idle | GoDown | GoUp deriving Show
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | ShowInv | ShowStats | Idle | GoDown | GoUp deriving Show
 
   data Event = Dir Direction | Exit | PlayerAction Action deriving Show

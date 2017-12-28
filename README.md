@@ -13,6 +13,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * c + a direction key - closes door in specified direction
 * i - Displays your current inventory (press another key to close)
 * < or > - Goes up or down a floor (respectively) if you are standing on that character
+* f - Displays your characters stats
 
 ## Dependancies
 * [ANSI Terminal](https://hackage.haskell.org/package/ansi-terminal) - Used for rendering game.

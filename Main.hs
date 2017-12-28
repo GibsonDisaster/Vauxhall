@@ -215,6 +215,7 @@ module Main where
       'c' -> return (PlayerAction CloseDoor)
       ',' -> return (PlayerAction PickUp)
       'i' -> return (PlayerAction ShowInv)
+      'f' -> return (PlayerAction ShowStats)
       '>' -> return (PlayerAction GoDown)
       '<' -> return (PlayerAction GoUp)
       _  -> getInput
@@ -242,10 +243,6 @@ module Main where
     putStrLn (dropQuotes (show $ hName (wHero w)))
     setCursorPosition 13 0
     putStrLn ("Your Score was: " ++ (show $ hScore (wHero w)))
-    putStrLn "Press \'q\' again to quit"
-    _ <- getInput
-    clearScreen
-    setCursorPosition 0 0
     showCursor
     setSGR [Reset]
 
@@ -299,6 +296,34 @@ module Main where
     mapM_ (\_ -> putStrLn "               ") (map show $ items (wHero w))
     putStrLn "                 "
     putStrLn "                 "
+    gameLoop w
+  handleEvent w (PlayerAction ShowStats) = do
+    drawStats (wHero w)
+    _ <- getInput
+    setCursorPosition 0 50
+    putStrLn "                "
+    setCursorPosition 1 50
+    putStrLn "                "
+    setCursorPosition 2 50
+    putStrLn "                "
+    setCursorPosition 3 50
+    putStrLn "                "
+    setCursorPosition 4 50
+    putStrLn "                "
+    setCursorPosition 5 50
+    putStrLn "                "
+    setCursorPosition 6 50
+    putStrLn "                "
+    setCursorPosition 7 50
+    putStrLn "                "
+    setCursorPosition 8 50
+    putStrLn "                "
+    setCursorPosition 0 75
+    putStrLn "                "
+    setCursorPosition 1 75
+    putStrLn "                "
+    setCursorPosition 2 75
+    putStrLn "                "
     gameLoop w
   handleEvent w (PlayerAction GoDown) = do
     let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
@@ -367,7 +392,7 @@ module Main where
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (wEnemies w)
-    drawStats (wHero w)
+    --drawStats (wHero w)
     setCursorPosition (fst $ hOldCoord (wHero w)) (snd $ hOldCoord (wHero w))
     putChar ' '
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
