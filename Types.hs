@@ -50,7 +50,7 @@ module Types where
                 eCoord :: Coord,
                 eOldCoord :: Coord,
                 eHealth :: Int
-               } deriving Show
+               } deriving (Show, Eq)
 
   data Hero = Hero {
                 hName :: String,

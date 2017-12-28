@@ -13,13 +13,18 @@ module Main where
   TODO:
     [X] Add money
     [X] Keep enemy within impassible objects (Check coords and make sure they are both correct)
-    [] Implement Enemy and Player attacking
+    [X] Implement Enemy attacking
+    [X] Implement Player attacking
+    [] Implement killing player/enemy when health <= 0
+    [] Stop Enemy from walking into player
     [?] Equip/De-Equip items
     [] Leveling/Classes/Attributes
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
-        - Specific enemies for each floor []
+    [] Specific enemies for each floor
     [] Clean up code!!!!
+    [] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
+    [] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
     [] Score displayed at end/death
         - Killing enemies []
@@ -113,6 +118,14 @@ module Main where
                                      '+' -> True
                                      _ -> False
 
+  findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
+  findEnemyByCoord es c
+    | length es == 1 = if (eCoord (head es)) == (eCoord dummy) then Just (head es) else Nothing
+    | (eCoord (head es)) == (eCoord dummy) = Just (head es)
+    | otherwise = findEnemyByCoord (tail es) c
+      where
+        dummy = Enemy { eCoord = c, eOldCoord = (1, 1), eHealth = 10 }
+
   getNextLvl :: String -> String
   getNextLvl lvl = "wall" ++ show nextNum
     where
@@ -178,6 +191,13 @@ module Main where
   moveEnemies :: World -> [Enemy] -> IO [Enemy]
   moveEnemies w es = mapM (moveEnemy w) es
 
+  updateEnemies :: [Enemy] -> Enemy -> Coord -> [Enemy]
+  updateEnemies es e c = let foundE = case findEnemyByCoord es (eCoord e) of
+                                       Just e -> e
+                                       Nothing -> undefined
+                             removeE = filter (\en -> (eHealth en > 0)) (filter (/= foundE) es)
+                             newE = removeE ++ [e { eHealth = (eHealth e) - 1 }] in newE
+
   getInput :: IO Event
   getInput = do
     char <- getChar
@@ -197,20 +217,45 @@ module Main where
       'i' -> return (PlayerAction ShowInv)
       '>' -> return (PlayerAction GoDown)
       '<' -> return (PlayerAction GoUp)
-      _   -> getInput
+      _  -> getInput
 
-  handleExit :: IO ()
-  handleExit = do
+  handleExit :: World -> IO ()
+  handleExit w = do
     clearScreen
     setCursorPosition 0 0
     showCursor
     setSGR [Reset]
     putStrLn "Thanks for playing!"
+    putStrLn " ___________"
+    putStrLn "/           \\"
+    putStrLn "|   R.I.P   |"
+    putStrLn "|           |"
+    putStrLn "|           |"
+    putStrLn "|           |"
+    putStrLn "|           |"
+    putStrLn "|     |     |"
+    putStrLn "|   --*--   |"
+    putStrLn "|     |     |"
+    putStrLn "|     |     |"
+    putStrLn "-------------"
+    setCursorPosition 5 3
+    putStrLn (dropQuotes (show $ hName (wHero w)))
+    setCursorPosition 13 0
+    putStrLn ("Your Score was: " ++ (show $ hScore (wHero w)))
+    putStrLn "Press \'q\' again to quit"
+    _ <- getInput
+    clearScreen
+    setCursorPosition 0 0
+    showCursor
+    setSGR [Reset]
 
   handleEvent :: World -> Event -> IO ()
   handleEvent w (Dir d) = do
     ems <- moveEnemies w (wEnemies w)
-    gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
+    let eFighting = findEnemyByCoord (wEnemies w) (flipCoord newHCoord)
+    case eFighting of
+     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1 }, wEnemies = (updateEnemies (wEnemies w) e newHCoord)}
+     Nothing -> gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
     where
       oldH = hCoord (wHero w)
       newHCoord = case d of
@@ -281,7 +326,7 @@ module Main where
     drawWorld w
     event <- getInput
     case event of
-      Exit -> handleExit
+      Exit -> handleExit w
       e -> handleEvent w e
 
   drawMap :: M.Map Coord Char -> IO ()
@@ -302,6 +347,8 @@ module Main where
     putStrLn "============"
     setCursorPosition 2 50
     putStrLn ("Class: " ++ show (hClass h)) 
+    setCursorPosition 3 50
+    putStr ("        " ++ "  ")
     setCursorPosition 3 50
     putStrLn ("Health: " ++ show (hHealth h))
     setCursorPosition 4 50
@@ -341,7 +388,7 @@ module Main where
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = wall1Mapped,
-                    wEnemies=[Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
+                    wEnemies= [Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
                   }
     drawWorld w
     gameLoop w
