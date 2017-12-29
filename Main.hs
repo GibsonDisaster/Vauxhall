@@ -25,7 +25,7 @@ module Main where
     [X] Up/Down Staircases
     [] Specific enemies for each floor!!!!!
     [] Clean up code!!!!
-    [] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
+    [?] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
     [] Change wallsList to just accept a [(String, [String])] and then put it all together
     [] Hunger System
     [X] Score kept throughout game 
@@ -44,6 +44,8 @@ module Main where
                   "        Henning      ",
                   "         Tonko       ",
                   "                     ",
+                  "                     ",
+                  "     \'a\' to begin   ",
                   "{===================}"]
 
   wall1 :: [String]
@@ -86,10 +88,10 @@ module Main where
   testEnemy = Enemy { eCoord = (33, 3), eOldCoord = (0, 0), eHealth = 3 }
 
   wallsList :: M.Map String [String]
-  wallsList = M.insert "wall3" wall3 (M.insert "wall2" wall2 (M.insert "wall1" wall1 M.empty))
+  wallsList = M.fromList [("wall1", wall1), ("wall2", wall2), ("wall3", wall3), ("wall4", wall4)]
 
   enemiesList :: M.Map String [Enemy]
-  enemiesList = M.insert "wall 3" [testEnemy] (M.insert "wall2" [testEnemy] (M.insert "wall1" [testEnemy] M.empty))
+  enemiesList = M.fromList [("wall1", [testEnemy]), ("wall2", [testEnemy]), ("wall3", [testEnemy]), ("wall4", [testEnemy])]
 
   {-
   Constants that must be used when determining a position
