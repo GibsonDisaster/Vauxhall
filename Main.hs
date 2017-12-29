@@ -182,6 +182,30 @@ module Main where
   dropQuotes :: String -> String
   dropQuotes str = (drop 1 . reverse . drop 1 . reverse) str
 
+  getConst :: Class -> Int
+  getConst c
+    | c == knight = kConst c
+    | c == thief = tConst c
+    | c == sub = sConst c
+    
+  getStr :: Class -> Int
+  getStr c
+    | c == knight = kStr c
+    | c == thief = tStr c
+    | c == sub = sStr c
+
+  getDex :: Class -> Int
+  getDex c
+    | c == knight = kDex c
+    | c == thief = tDex c
+    | c == sub = sDex c
+
+  getInt :: Class -> Int
+  getInt c
+    | c == knight = kInt c
+    | c == thief = tInt c
+    | c == sub = sInt c
+
   isThatChar :: Coord -> Char -> M.Map Coord Char -> Bool
   isThatChar c ch m = case M.lookup c m of
                        Nothing -> False
@@ -434,6 +458,22 @@ module Main where
     setCursorPosition 0 0
     putChar '-'
 
+  getClass :: IO Class
+  getClass = do
+    setCursorPosition 0 0
+    putStrLn "Pick a class"
+    putStrLn "============"
+    putStrLn "a - Knight"
+    putStrLn "b - Thief"
+    putStrLn "c - Substitute Teacher"
+    putStrLn "* - Random Class"
+    c <- getChar
+    case c of
+      'a' -> return knight
+      'b' -> return thief
+      'c' -> return sub
+      '*' -> randChoice [knight, thief, sub]
+
   main :: IO ()
   main = do
     hSetEcho stdin False
@@ -443,7 +483,9 @@ module Main where
     setTitle "Vauxhall"
     name <- head <$> getArgs
     clearScreen
-    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = [], hScore = 0 }, 
+    c <- getClass
+    clearScreen
+    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0 }, 
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = wall1Mapped,

@@ -31,7 +31,7 @@ module Types where
                 sStr :: Int,
                 sDex :: Int,
                 sInt :: Int
-               }
+               } deriving Eq
 
   instance Show Class where
     show (Knight _ _ _ _) = "Knight"
@@ -57,6 +57,7 @@ module Types where
                 hCoord :: Coord,
                 hOldCoord :: Coord,
                 hHealth :: Int,
+                hDmg :: Int,
                 hExp :: Int,
                 hLvl :: Int,
                 hClass :: Class,
