@@ -19,6 +19,7 @@ module Main where
     [X] Stop Enemy from walking into player
     [?] Equip/De-Equip items
     [] Leveling/Classes/Attributes
+    [] Menu where you pick your name and class at beginning
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
     [] Specific enemies for each floor!!!!!
@@ -70,7 +71,7 @@ module Main where
           "--------------------------------------"]
 
   testEnemy :: Enemy
-  testEnemy = Enemy { eCoord = (33, 3), eOldCoord = (0, 0), eHealth = 10 }
+  testEnemy = Enemy { eCoord = (33, 3), eOldCoord = (0, 0), eHealth = 3 }
 
   wallsList :: M.Map String [String]
   wallsList = M.insert "wall3" wall3 (M.insert "wall2" wall2 (M.insert "wall1" wall1 M.empty))
@@ -123,6 +124,7 @@ module Main where
   getVect Down = (1, 0) |+| dConst
   getVect Left = (0, -1) |+| lConst
   getVect Right = (0, 1) |+| rConst
+  getVect Stay = (0, 0)
 
   isImpassible :: M.Map Coord Char -> Coord -> Bool
   isImpassible m coord = case M.lookup coord m of
@@ -200,7 +202,7 @@ module Main where
 
   moveEnemy :: World -> Enemy -> IO Enemy
   moveEnemy w e = do
-    dir <- randChoice [Up, Down, Left, Right]
+    dir <- randChoice [Up, Down, Left, Right, Stay, Stay, Stay]
     let newCoord = (flipCoord (getVect dir) |+| (eCoord e))
     return e { eCoord = if (isImpassible (tileMap w) (newCoord)) then (eCoord e) else newCoord, eOldCoord = (eOldCoord e) }
 
@@ -240,6 +242,7 @@ module Main where
       'f' -> return (PlayerAction ShowStats)
       '>' -> return (PlayerAction GoDown)
       '<' -> return (PlayerAction GoUp)
+      'r' -> return (PlayerAction Rest)
       _  -> getInput
 
   handleExit :: World -> IO ()
@@ -373,6 +376,9 @@ module Main where
                        Just es -> es
     let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls, wEnemies = lastEnemies } else w
     gameLoop w'
+  handleEvent w (PlayerAction Rest) = do
+    h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
+    gameLoop w { wHero = (wHero w) { hHealth = if ((hHealth (wHero w)) + h) >= 10 then 10 else (hHealth (wHero w)) + h } }
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -437,7 +443,7 @@ module Main where
     setTitle "Vauxhall"
     name <- head <$> getArgs
     clearScreen
-    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 1000, hExp = 0, hLvl = 1, hClass = knight, items = [], hScore = 0 }, 
+    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = [], hScore = 0 }, 
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = wall1Mapped,

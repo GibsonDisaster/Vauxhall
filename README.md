@@ -14,6 +14,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * i - Displays your current inventory (press another key to close)
 * < or > - Goes up or down a floor (respectively) if you are standing on that character
 * f - Displays your characters stats
+* r - Rests and heals your character
 
 # Screenshots
 
