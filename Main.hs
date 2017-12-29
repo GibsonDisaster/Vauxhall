@@ -19,7 +19,8 @@ module Main where
     [X] Stop Enemy from walking into player
     [?] Equip/De-Equip items
     [] Leveling/Classes/Attributes
-    [] Menu where you pick your name and class at beginning
+    [] Title Screen
+    [X] Menu where you pick your name and class at beginning
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
     [] Specific enemies for each floor!!!!!
@@ -33,6 +34,17 @@ module Main where
         - Picking up gold [X]
     [] Hunger System
   -}
+
+  titleStrings :: [String]
+  titleStrings = ["{===================}",
+                  "                     ",
+                  "       Vauxhall       ",
+                  "                     ",
+                  "      Written By:    ",
+                  "        Henning      ",
+                  "         Tonko       ",
+                  "                     ",
+                  "{===================}"]
 
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
@@ -474,6 +486,11 @@ module Main where
       'c' -> return sub
       '*' -> randChoice [knight, thief, sub]
 
+  showTitleScreen :: IO ()
+  showTitleScreen = do
+    setCursorPosition 0 0
+    mapM_ (\s -> putStrLn s) titleStrings
+
   main :: IO ()
   main = do
     hSetEcho stdin False
@@ -482,6 +499,9 @@ module Main where
     hideCursor
     setTitle "Vauxhall"
     name <- head <$> getArgs
+    clearScreen
+    showTitleScreen
+    _ <- getInput
     clearScreen
     c <- getClass
     clearScreen
