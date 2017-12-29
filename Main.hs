@@ -26,8 +26,8 @@ module Main where
     [] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
     [] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
-    [] Score displayed at end/death
-        - Killing enemies []
+    [X] Score displayed at end/death
+        - Killing enemies [X]
         - Picking up items [X]
         - Picking up gold [X]
     [] Hunger System
@@ -423,8 +423,6 @@ module Main where
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (wEnemies w)
-    setCursorPosition (fst $ hOldCoord (wHero w)) (snd $ hOldCoord (wHero w))
-    putChar ' '
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
     putChar '@'
     setCursorPosition 0 0
