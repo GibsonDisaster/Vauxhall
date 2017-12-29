@@ -15,13 +15,13 @@ module Main where
     [X] Keep enemy within impassible objects (Check coords and make sure they are both correct)
     [X] Implement Enemy attacking
     [X] Implement Player attacking
-    [] Implement killing player/enemy when health <= 0
-    [] Stop Enemy from walking into player
+    [X] Implement killing player/enemy when health <= 0
+    [X] Stop Enemy from walking into player
     [?] Equip/De-Equip items
     [] Leveling/Classes/Attributes
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
-    [] Specific enemies for each floor
+    [] Specific enemies for each floor!!!!!
     [] Clean up code!!!!
     [] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
     [] Change wallsList to just accept a [(String, [String])] and then put it all together
@@ -55,13 +55,28 @@ module Main where
   wall3 = ["--------------------------------------",
            "|<            ~~~~~                  |",
            "|               ~~~~                 |",
-           "|                ~~~~                |",
+           "|                ~~~~              > |",
            "|                 ~~~~~              |",
            "|                 ~~~~~~~~           |",
            "--------------------------------------"]
 
+  wall4 :: [String]
+  wall4 = ["--------------------------------------",
+          "|                                    |",
+          "|                  |                 |",
+          "|                  |               < |",
+          "|                $-+-$               |",
+          "|                  |                 |",
+          "--------------------------------------"]
+
+  testEnemy :: Enemy
+  testEnemy = Enemy { eCoord = (33, 3), eOldCoord = (0, 0), eHealth = 10 }
+
   wallsList :: M.Map String [String]
   wallsList = M.insert "wall3" wall3 (M.insert "wall2" wall2 (M.insert "wall1" wall1 M.empty))
+
+  enemiesList :: M.Map String [Enemy]
+  enemiesList = M.insert "wall 3" [testEnemy] (M.insert "wall2" [testEnemy] (M.insert "wall1" [testEnemy] M.empty))
 
   {-
   Constants that must be used when determining a position
@@ -120,6 +135,7 @@ module Main where
 
   findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
   findEnemyByCoord es c
+    | length es == 0 = Nothing
     | length es == 1 = if (eCoord (head es)) == (eCoord dummy) then Just (head es) else Nothing
     | (eCoord (head es)) == (eCoord dummy) = Just (head es)
     | otherwise = findEnemyByCoord (tail es) c
@@ -198,6 +214,12 @@ module Main where
                              removeE = filter (\en -> (eHealth en > 0)) (filter (/= foundE) es)
                              newE = removeE ++ [e { eHealth = (eHealth e) - 1 }] in newE
 
+  deadEnemies :: [Enemy] -> [Enemy]
+  deadEnemies es
+    | length es == 0 = []
+    | length es == 1 = if (eHealth (head es)) <= 0 then [] else [(head es)]
+    | otherwise = (if (eHealth (head es)) <= 0 then [] else [(head es)]) ++ deadEnemies (tail es)
+
   getInput :: IO Event
   getInput = do
     char <- getChar
@@ -251,7 +273,7 @@ module Main where
     ems <- moveEnemies w (wEnemies w)
     let eFighting = findEnemyByCoord (wEnemies w) (flipCoord newHCoord)
     case eFighting of
-     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1 }, wEnemies = (updateEnemies (wEnemies w) e newHCoord)}
+     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1, hScore = (hScore (wHero w)) + 2 }, wEnemies = (updateEnemies (wEnemies w) e newHCoord)}
      Nothing -> gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
     where
       oldH = hCoord (wHero w)
@@ -333,7 +355,10 @@ module Main where
     let nextWalls = case M.lookup nextStr wallsList of
                      Nothing -> (walls w)
                      Just ch -> ch
-    let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls } else w
+    let nextEnemies = case M.lookup nextStr enemiesList of
+                       Nothing -> (wEnemies w)
+                       Just es -> es
+    let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls, wEnemies = nextEnemies } else w
     gameLoop w'
   handleEvent w (PlayerAction GoUp) = do
     let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
@@ -343,16 +368,21 @@ module Main where
     let lastWalls = case M.lookup nextStr wallsList of
                       Nothing -> (walls w)
                       Just ch -> ch
-    let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls } else w
+    let lastEnemies = case M.lookup nextStr enemiesList of
+                       Nothing -> (wEnemies w)
+                       Just es -> es
+    let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls, wEnemies = lastEnemies } else w
     gameLoop w'
 
   gameLoop :: World -> IO ()
   gameLoop w = do
     drawWorld w
+    let w' = w { wEnemies = deadEnemies (wEnemies w) }
+    if (hHealth (wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
-      Exit -> handleExit w
-      e -> handleEvent w e
+      Exit -> handleExit w'
+      e -> handleEvent w' e
 
   drawMap :: M.Map Coord Char -> IO ()
   drawMap m = mapM_ (\((x, y), c) -> do {setCursorPosition y x; putChar c}) l
@@ -361,6 +391,7 @@ module Main where
 
   drawEnemies :: [Enemy] -> IO ()
   drawEnemies e
+    | length e == 0 = return ()
     | length e == 1 = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'}
     | otherwise = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
 
@@ -392,7 +423,6 @@ module Main where
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (wEnemies w)
-    --drawStats (wHero w)
     setCursorPosition (fst $ hOldCoord (wHero w)) (snd $ hOldCoord (wHero w))
     putChar ' '
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
@@ -409,11 +439,11 @@ module Main where
     setTitle "Vauxhall"
     name <- head <$> getArgs
     clearScreen
-    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10, hExp = 0, hLvl = 1, hClass = knight, items = [], hScore = 0 }, 
+    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 1000, hExp = 0, hLvl = 1, hClass = knight, items = [], hScore = 0 }, 
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = wall1Mapped,
-                    wEnemies= [Enemy {eCoord = (33, 3), eOldCoord = (0,0), eHealth = 10}]
+                    wEnemies = [testEnemy]
                   }
     drawWorld w
     gameLoop w
