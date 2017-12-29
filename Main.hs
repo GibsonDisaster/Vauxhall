@@ -18,8 +18,8 @@ module Main where
     [X] Implement killing player/enemy when health <= 0
     [X] Stop Enemy from walking into player
     [?] Equip/De-Equip items
-    [] Leveling/Classes/Attributes
-    [] Title Screen
+    [X] Leveling/Classes/Attributes
+    [X] Title Screen
     [X] Menu where you pick your name and class at beginning
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
@@ -27,12 +27,12 @@ module Main where
     [] Clean up code!!!!
     [] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
     [] Change wallsList to just accept a [(String, [String])] and then put it all together
+    [] Hunger System
     [X] Score kept throughout game 
     [X] Score displayed at end/death
         - Killing enemies [X]
         - Picking up items [X]
         - Picking up gold [X]
-    [] Hunger System
   -}
 
   titleStrings :: [String]
@@ -258,6 +258,11 @@ module Main where
     | length es == 1 = if (eHealth (head es)) <= 0 then [] else [(head es)]
     | otherwise = (if (eHealth (head es)) <= 0 then [] else [(head es)]) ++ deadEnemies (tail es)
 
+  checkLevel :: Hero -> Hero
+  checkLevel h
+    | (hExp h) >= 20 = h { hExp = 0, hLvl = (hLvl h) + 1 }
+    | otherwise = h
+
   getInput :: IO Event
   getInput = do
     char <- getChar
@@ -312,7 +317,7 @@ module Main where
     ems <- moveEnemies w (wEnemies w)
     let eFighting = findEnemyByCoord (wEnemies w) (flipCoord newHCoord)
     case eFighting of
-     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1, hScore = (hScore (wHero w)) + 2 }, wEnemies = (updateEnemies (wEnemies w) e newHCoord)}
+     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1, hExp = (hExp (wHero w)) + 2, hScore = (hScore (wHero w)) + 2 }, wEnemies = (updateEnemies (wEnemies w) e newHCoord)}
      Nothing -> gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
     where
       oldH = hCoord (wHero w)
@@ -419,7 +424,7 @@ module Main where
   gameLoop :: World -> IO ()
   gameLoop w = do
     drawWorld w
-    let w' = w { wEnemies = deadEnemies (wEnemies w) }
+    let w' = w { wHero = checkLevel (wHero w), wEnemies = deadEnemies (wEnemies w) }
     if (hHealth (wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
