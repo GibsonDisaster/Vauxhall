@@ -15,5 +15,23 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * < or > - Goes up or down a floor (respectively) if you are standing on that character
 * f - Displays your characters stats
 
+# Screenshots
+
+Beginning of the game:
+
+![](screenshots/firstLevel.png)
+
+Checking our stats:
+
+![](screenshots/checkingStats.png)
+
+Down to the second level:
+
+![](screenshots/secondLevel.png)
+
+When you die or quit:
+
+![](screenshots/deathScreen.png)
+
 ## Dependancies
 * [ANSI Terminal](https://hackage.haskell.org/package/ansi-terminal) - Used for rendering game.
