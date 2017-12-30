@@ -22,6 +22,14 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 
 Beginning of the game:
 
+![](screenshots/mainMenu.png)
+
+Picking a class:
+
+![](screenshots/pickingClass.png)
+
+Enter the first level:
+
 ![](screenshots/firstLevel.png)
 
 Checking our stats:
