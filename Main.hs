@@ -24,8 +24,11 @@ module Main where
     [X] Up/Down Staircases
     [X] Specific enemies for each floor!!!!!
     [] Clean up code!!!!
+    [] Make attributes matter
+    [] Multiple kinds of Enemies
     [] Make a better title screen
     [] Make it FUN!!!!
+    [] Boss at the end called "The Relayer"
     [X] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
     [X] Score displayed at end/death
@@ -35,16 +38,16 @@ module Main where
   -}
 
   titleStrings :: [String]
-  titleStrings = ["{===================}",
-                  "                     ",
-                  "       Vauxhall       ",
-                  "                     ",
-                  "      Written By:    ",
-                  "        Henning      ",
-                  "         Tonko       ",
-                  "                     ",
-                  "                     ",
-                  "     \'a\' to begin   ",
+  titleStrings = ["{===================}                              ",
+                  "                                                  ",
+                  "       Vauxhall                                   ",
+                  "                                                   ",
+                  "      Written By:                                  ",
+                  "        Henning                                    ",
+                  "         Tonko                                     ",
+                  "                                                  ",
+                  "                                                   ",
+                  "     \'a\' to begin                                ",
                   "{===================}"]
 
   wall1 :: [String]
@@ -420,7 +423,7 @@ module Main where
     gameLoop w'
   handleEvent w (PlayerAction Rest) = do
     h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
-    gameLoop w { wHero = (wHero w) { hHealth = if ((hHealth (wHero w)) + h) >= 10 then 10 else (hHealth (wHero w)) + h } }
+    gameLoop w { wHero = (wHero w) { hHealth = if (((hHealth (wHero w))) + h) >= 10 then 10 + (getConst (hClass (wHero w))) else (hHealth (wHero w)) + h } }
 
   gameLoop :: World -> IO ()
   gameLoop w = do
