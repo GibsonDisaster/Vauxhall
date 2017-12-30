@@ -4,6 +4,8 @@
 1) Enter the directory containing the Vauxhall binary file
 2) Run it using "./Vauxhall Name" (Substituting "Name" for your players name)
 
+Ex: ```./Vauxhall Henning```
+
 Play with your Terminal window in fullscreen to avoid rendering issues
 
 ## Keys

@@ -43,7 +43,8 @@ module Types where
                 walls :: [String],
                 currentLvl :: String,
                 tileMap :: M.Map Coord Char,
-                wEnemies :: [Enemy]
+                wEnemies :: M.Map String [Enemy],
+                currEnemies :: [Enemy]
                } deriving Show
 
   data Enemy = Enemy {

@@ -17,17 +17,16 @@ module Main where
     [X] Implement Player attacking
     [X] Implement killing player/enemy when health <= 0
     [X] Stop Enemy from walking into player
-    [?] Equip/De-Equip items
     [X] Leveling/Classes/Attributes
     [X] Title Screen
     [X] Menu where you pick your name and class at beginning
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
-    [] Specific enemies for each floor!!!!!
+    [X] Specific enemies for each floor!!!!!
     [] Clean up code!!!!
-    [?] Fix Coordinate problems (get rid of flipCoords, make a standard format for coords)
-    [] Change wallsList to just accept a [(String, [String])] and then put it all together
-    [] Hunger System
+    [] Make a better title screen
+    [] Make it FUN!!!!
+    [X] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
     [X] Score displayed at end/death
         - Killing enemies [X]
@@ -84,14 +83,14 @@ module Main where
           "|                  |                 |",
           "--------------------------------------"]
 
-  testEnemy :: Enemy
-  testEnemy = Enemy { eCoord = (33, 3), eOldCoord = (0, 0), eHealth = 3 }
+  testEnemy :: Int -> Int -> Enemy
+  testEnemy x y = Enemy { eCoord = (x, y), eOldCoord = (0, 0), eHealth = 3 }
 
   wallsList :: M.Map String [String]
   wallsList = M.fromList [("wall1", wall1), ("wall2", wall2), ("wall3", wall3), ("wall4", wall4)]
 
   enemiesList :: M.Map String [Enemy]
-  enemiesList = M.fromList [("wall1", [testEnemy]), ("wall2", [testEnemy]), ("wall3", [testEnemy]), ("wall4", [testEnemy])]
+  enemiesList = M.fromList [("wall1", [testEnemy 33 3]), ("wall2", [testEnemy 4 4]), ("wall3", [testEnemy 8 2]), ("wall4", [testEnemy 1 1])]
 
   {-
   Constants that must be used when determining a position
@@ -316,11 +315,11 @@ module Main where
 
   handleEvent :: World -> Event -> IO ()
   handleEvent w (Dir d) = do
-    ems <- moveEnemies w (wEnemies w)
-    let eFighting = findEnemyByCoord (wEnemies w) (flipCoord newHCoord)
+    ems <- moveEnemies w (currEnemies w)
+    let eFighting = findEnemyByCoord (currEnemies w) (flipCoord newHCoord)
     case eFighting of
-     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1, hExp = (hExp (wHero w)) + 2, hScore = (hScore (wHero w)) + 2 }, wEnemies = (updateEnemies (wEnemies w) e newHCoord)}
-     Nothing -> gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, wEnemies = ems }
+     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1, hExp = (hExp (wHero w)) + 2, hScore = (hScore (wHero w)) + 2 }, currEnemies = (updateEnemies (currEnemies w) e newHCoord)}
+     Nothing -> gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, currEnemies = ems }
     where
       oldH = hCoord (wHero w)
       newHCoord = case d of
@@ -401,10 +400,10 @@ module Main where
     let nextWalls = case M.lookup nextStr wallsList of
                      Nothing -> (walls w)
                      Just ch -> ch
-    let nextEnemies = case M.lookup nextStr enemiesList of
-                       Nothing -> (wEnemies w)
+    let nextEnemies = case M.lookup nextStr (wEnemies w) of
+                       Nothing -> (currEnemies w)
                        Just es -> es
-    let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls, wEnemies = nextEnemies } else w
+    let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls, currEnemies = nextEnemies, wEnemies = M.insert (currentLvl w) (currEnemies w) (wEnemies w) } else w
     gameLoop w'
   handleEvent w (PlayerAction GoUp) = do
     let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
@@ -414,10 +413,10 @@ module Main where
     let lastWalls = case M.lookup nextStr wallsList of
                       Nothing -> (walls w)
                       Just ch -> ch
-    let lastEnemies = case M.lookup nextStr enemiesList of
-                       Nothing -> (wEnemies w)
+    let lastEnemies = case M.lookup nextStr (wEnemies w) of
+                       Nothing -> (currEnemies w)
                        Just es -> es
-    let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls, wEnemies = lastEnemies } else w
+    let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls, currEnemies = lastEnemies, wEnemies = M.insert (currentLvl w) (currEnemies w) (wEnemies w) } else w
     gameLoop w'
   handleEvent w (PlayerAction Rest) = do
     h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
@@ -426,7 +425,7 @@ module Main where
   gameLoop :: World -> IO ()
   gameLoop w = do
     drawWorld w
-    let w' = w { wHero = checkLevel (wHero w), wEnemies = deadEnemies (wEnemies w) }
+    let w' = w { wHero = checkLevel (wHero w), currEnemies = deadEnemies (currEnemies w) }
     if (hHealth (wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
@@ -471,7 +470,7 @@ module Main where
   drawWorld w = do
     setCursorPosition 0 0
     drawMap (tileMap w)
-    drawEnemies (wEnemies w)
+    drawEnemies (currEnemies w)
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
     putChar '@'
     setCursorPosition 0 0
@@ -516,7 +515,8 @@ module Main where
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = wall1Mapped,
-                    wEnemies = [testEnemy]
+                    wEnemies = enemiesList,
+                    currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es}
                   }
     drawWorld w
     gameLoop w
