@@ -101,8 +101,8 @@ module Main where
           "|<                                   |",
           "--------------------------------------"]
 
-  spawnEnemy :: Int -> Int -> Enemy
-  spawnEnemy x y = Enemy { eCoord = (x, y), eOldCoord = (0, 0), eHealth = 3 }
+  spawnEnemy :: Coord -> Int -> Enemy
+  spawnEnemy c h = Enemy { eCoord = c, eOldCoord = (0, 0), eHealth = h }
 
   wallsList :: M.Map String [String]
   wallsList = M.fromList [
@@ -115,16 +115,16 @@ module Main where
 
   enemiesList :: M.Map String [Enemy]
   enemiesList = M.fromList [
-                            ("wall1", [spawnEnemy 33 3]),
-                            ("wall2", [spawnEnemy 4 4]),
-                            ("wall3", [spawnEnemy 8 2]),
-                            ("wall4", [spawnEnemy 1 1]),
-                            ("wall5", [spawnEnemy 14 1])
+                            ("wall1", [spawnEnemy (33, 3) 6]),
+                            ("wall2", [spawnEnemy (4, 4) 7]),
+                            ("wall3", [spawnEnemy (8, 2) 6, spawnEnemy (33, 5) 5]),
+                            ("wall4", [spawnEnemy (1, 1) 9]),
+                            ("wall5", [spawnEnemy (14, 1) 90])
                            ]
 
   inspectList :: M.Map (Coord, String) [String]
   inspectList = M.fromList [ 
-                            (((15,4), "wall5"), ["Hello My name is Jan Lawen!", "I am the disgraced polka king of Pennsylvania"])
+                            (((15,4), "wall5"), ["Hello My name is Jan Lawen!", "I am the disgraced polka king of Pennsylvania", "Wouldn't you like to be me?"])
                            ]
 
   {-
@@ -393,7 +393,7 @@ module Main where
     let i = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
              Nothing -> ' '
              Just c -> c
-    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1) }
+    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1), hMoney = (hMoney (wHero w)) + (if i == '$' then (5) else 0)}
     let oldHero = (wHero w)
     gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then oldHero else newHero }
   handleEvent w (PlayerAction ShowInv) = do
@@ -410,30 +410,7 @@ module Main where
   handleEvent w (PlayerAction ShowStats) = do
     drawStats (wHero w)
     _ <- getInput
-    setCursorPosition 0 50
-    putStrLn "                "
-    setCursorPosition 1 50
-    putStrLn "                "
-    setCursorPosition 2 50
-    putStrLn "                "
-    setCursorPosition 3 50
-    putStrLn "                "
-    setCursorPosition 4 50
-    putStrLn "                "
-    setCursorPosition 5 50
-    putStrLn "                "
-    setCursorPosition 6 50
-    putStrLn "                "
-    setCursorPosition 7 50
-    putStrLn "                "
-    setCursorPosition 8 50
-    putStrLn "                "
-    setCursorPosition 0 75
-    putStrLn "                "
-    setCursorPosition 1 75
-    putStrLn "                "
-    setCursorPosition 2 75
-    putStrLn "                "
+    clearScreen
     gameLoop w
   handleEvent w (PlayerAction GoDown) = do
     let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
@@ -484,7 +461,7 @@ module Main where
   gameLoop :: World -> IO ()
   gameLoop w = do
     drawWorld w
-    let w' = w { wHero = checkLevel (wHero w), currEnemies = deadEnemies (currEnemies w) }
+    let w' = w { wHero = (checkLevel (wHero w)) { hMoney = (if (hName (wHero w)) == "JanLawen" then ((hMoney (wHero w)) - 1) else (hMoney (wHero w))) }, currEnemies = deadEnemies (currEnemies w) }
     if (hHealth (wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
@@ -518,6 +495,8 @@ module Main where
     putStrLn ("Exp: " ++ show (hExp h))
     setCursorPosition 5 50
     putStrLn ("Level: " ++ show (hLvl h))
+    setCursorPosition 6 50
+    putStrLn ("Money: $" ++ show(hMoney h))
     setCursorPosition 0 75
     putStrLn ((hName h) ++ "\'s Score")
     setCursorPosition 1 75
@@ -570,7 +549,7 @@ module Main where
     clearScreen
     c <- getClass name
     clearScreen
-    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0 }, 
+    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0, hMoney = (if name == "JanLawen" then 999 else 0) }, 
                     walls = wall1,
                     currentLvl = "wall1",
                     tileMap = mapWalls wall1,

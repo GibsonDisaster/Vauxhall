@@ -70,7 +70,8 @@ module Types where
                 hLvl :: Int,
                 hClass :: Class,
                 items :: [Item],
-                hScore :: Int
+                hScore :: Int,
+                hMoney :: Int
               } deriving Show
 
   data Direction = Up | Down | Left | Right | Stay deriving Show
