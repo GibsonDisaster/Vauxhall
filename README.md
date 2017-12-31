@@ -10,7 +10,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 
 ## Keys
 * wasd or hjkl - movement
-* p - picks up item currently standing on
+* , - picks up item currently standing on
 * o + a direction key - opens door in specified direction
 * c + a direction key - closes door in specified direction
 * i - Displays your current inventory (press another key to close)
