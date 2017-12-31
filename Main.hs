@@ -1,5 +1,6 @@
 module Main where
   import Prelude hiding (Either(..))
+  import Data.List (delete)
   import System.Console.ANSI
   import System.IO
   import System.Random
@@ -25,6 +26,8 @@ module Main where
     [X] Specific enemies for each floor!!!!!
     [] Clean up code!!!!
     [] Make attributes matter
+    [] Make health potions
+    [] Remove gear from the ground
     [] Multiple kinds of Enemies
     [] Make a better title screen
     [] Make it FUN!!!!
@@ -288,6 +291,7 @@ module Main where
       '>' -> return (PlayerAction GoDown)
       '<' -> return (PlayerAction GoUp)
       'r' -> return (PlayerAction Rest)
+      'z' -> return (PlayerAction Quaff)
       _  -> getInput
 
   handleExit :: World -> IO ()
@@ -424,6 +428,13 @@ module Main where
   handleEvent w (PlayerAction Rest) = do
     h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
     gameLoop w { wHero = (wHero w) { hHealth = if (((hHealth (wHero w))) + h) >= 10 then 10 + (getConst (hClass (wHero w))) else (hHealth (wHero w)) + h } }
+  handleEvent w (PlayerAction Quaff) = do
+    let h = (wHero w)
+    let inv = (items h)
+    let maxHealth = (getConst (hClass h)) + 10
+    let w' = if (Potion  `elem` inv) then (if (((hHealth h) + 10) >= maxHealth) then w { wHero = h { hHealth = maxHealth } } else w { wHero = h { hHealth = (hHealth h) + 10 } }) else w
+    let w'' = w' { wHero = (wHero w') { items = delete Potion (items (wHero w')) } }
+    gameLoop w''
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -496,10 +507,8 @@ module Main where
       '*' -> randChoice [knight, thief, sub]
 
   showTitleScreen :: IO ()
-  showTitleScreen = do
-    setCursorPosition 0 0
-    mapM_ (\s -> putStrLn s) titleStrings
-
+  showTitleScreen = do { setCursorPosition 0 0; mapM_ (\s -> putStrLn s) titleStrings }
+  
   main :: IO ()
   main = do
     hSetEcho stdin False

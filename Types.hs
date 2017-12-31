@@ -3,7 +3,7 @@ module Types where
 
   type Coord = (Int, Int)
 
-  data Item = Sword | Shield | Potion | Coin | Null
+  data Item = Sword | Shield | Potion | Coin | Null deriving Eq
 
   instance Show Item where
     show Sword = "Sword"
@@ -68,6 +68,6 @@ module Types where
 
   data Direction = Up | Down | Left | Right | Stay deriving Show
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp deriving Show
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff deriving Show
 
   data Event = Dir Direction | Exit | PlayerAction Action deriving Show

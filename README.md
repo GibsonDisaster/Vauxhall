@@ -17,6 +17,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * < or > - Goes up or down a floor (respectively) if you are standing on that character
 * f - Displays your characters stats
 * r - Rests and heals your character
+* z - Drinks a potion (healing you) if you have any potions
 
 # Screenshots
 
