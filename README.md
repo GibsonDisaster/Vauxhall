@@ -18,6 +18,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * f - Displays your characters stats
 * r - Rests and heals your character
 * z - Drinks a potion (healing you) if you have any potions
+* space bar - Interacts with a dialogue tile you are standing on, which is marked by a '?' on the map
 
 # Screenshots
 
