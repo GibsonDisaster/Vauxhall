@@ -19,6 +19,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * r - Rests and heals your character
 * z - Drinks a potion (healing you) if you have any potions
 * space bar - Interacts with a dialogue tile you are standing on, which is marked by a '?' on the map
+* 'b' - like ',' but used to buy items in a shop instead of picking them up
 
 # Screenshots
 

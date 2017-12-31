@@ -51,7 +51,8 @@ module Types where
                 tileMap :: M.Map Coord Char,
                 wEnemies :: M.Map String [Enemy],
                 currEnemies :: [Enemy],
-                wInspects :: M.Map (Coord, String) [String]
+                wInspects :: M.Map (Coord, String) [String],
+                wShops :: M.Map (Coord, String) (Item, Int)
                } deriving Show
 
   data Enemy = Enemy {
@@ -76,6 +77,6 @@ module Types where
 
   data Direction = Up | Down | Left | Right | Stay deriving Show
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect deriving Show
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy deriving Show
 
   data Event = Dir Direction | Exit | PlayerAction Action deriving Show

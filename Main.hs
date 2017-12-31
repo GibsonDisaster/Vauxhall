@@ -35,6 +35,7 @@ module Main where
     [] Make a better title screen
     [] Make it FUN!!!!
     [] Boss at the end called "The Relayer"
+    [] Branching paths?
     [X] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
     [X] Score displayed at end/death
@@ -84,13 +85,13 @@ module Main where
            "--------------------------------------"]
 
   wall4 :: [String]
-  wall4 = ["--------------------------------------",
-          "|                                    |",
-          "|                  |                 |",
-          "|                  |               < |",
-          "|                $-+-$               |",
-          "|>                 |                 |",
-          "--------------------------------------"]
+  wall4 = ["-------------------------------------   ----------",
+          "|                                    |   |$ SHOP $|",
+          "|                  |                 |---|--------|",
+          "|                  |               <   +    ppp   |",
+          "|                $-+-$               |---| p  p   |",
+          "|>                 |                 |   |  p     |",
+          "--------------------------------------   ----------"]
 
   wall5 :: [String]
   wall5 = ["--------------------------------------",
@@ -127,6 +128,17 @@ module Main where
                             (((15,4), "wall5"), ["Hello My name is Jan Lawen!", "I am the disgraced polka king of Pennsylvania", "Wouldn't you like to be me?"])
                            ]
 
+  shopList :: M.Map (Coord, String) (Item, Int)
+  shopList = M.fromList [
+                         (((45, 3), "wall4"), (Potion, 10)),
+                         (((44, 3), "wall4"), (Potion, 10)),
+                         (((46, 3), "wall4"), (Potion, 10)),
+                         (((43, 4), "wall4"), (Potion, 10)),
+                         (((45, 5), "wall4"), (Potion, 10)),
+                         (((46, 4), "wall4"), (Potion, 10)),
+                         (((44, 5), "wall4"), (Potion, 10))
+                        ]
+                        
   {-
   Constants that must be used when determining a position
   because of ANSI's insane coordinate system.
@@ -184,6 +196,11 @@ module Main where
                                      '+' -> True
                                      'I' -> True
                                      _ -> False
+
+  isAShopItem :: World -> Coord -> String -> Bool
+  isAShopItem w c l = case M.lookup (c, l) (wShops w) of
+                       Nothing -> False
+                       Just t -> True
 
   findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
   findEnemyByCoord es c
@@ -328,6 +345,7 @@ module Main where
       'r' -> return (PlayerAction Rest)
       'z' -> return (PlayerAction Quaff)
       ' ' -> return (PlayerAction Inspect)
+      'b' -> return (PlayerAction Buy)
       _  -> getInput
 
   handleExit :: World -> IO ()
@@ -395,12 +413,12 @@ module Main where
              Just c -> c
     let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1), hMoney = (hMoney (wHero w)) + (if i == '$' then (5) else 0)}
     let oldHero = (wHero w)
-    gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then oldHero else newHero }
+    if (isAShopItem w (flipCoord (hCoord (wHero w))) (currentLvl w)) then gameLoop w else gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then oldHero else newHero }    
   handleEvent w (PlayerAction ShowInv) = do
     setCursorPosition 0 0
     putStrLn "Inventory"
     putStrLn "========="
-    mapM_ putStrLn (map show $ items (wHero w))
+    mapM_ putStrLn (map show $ filter (/= Coin) (items (wHero w)))
     _ <- getInput
     setCursorPosition 0 0
     mapM_ (\_ -> putStrLn "               ") (map show $ items (wHero w))
@@ -457,6 +475,12 @@ module Main where
     _ <- getInput
     mapM_ (\_ -> putStrLn "                                 ") t
     gameLoop w
+  handleEvent w (PlayerAction Buy) = do
+    let i = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
+             Nothing -> ' '
+             Just c -> c
+    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1), hMoney = (hMoney (wHero w)) - (case M.lookup (flipCoord (hCoord (wHero w)), currentLvl w) (wShops w) of { Nothing -> 0; Just (_, p) -> p })}
+    if (isAShopItem w (flipCoord (hCoord (wHero w))) (currentLvl w)) then gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then (wHero w) else newHero } else gameLoop w  
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -506,7 +530,6 @@ module Main where
 
   drawWorld :: World -> IO ()
   drawWorld w = do
-    clearScreen
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (currEnemies w)
@@ -549,13 +572,15 @@ module Main where
     clearScreen
     c <- getClass name
     clearScreen
-    let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0, hMoney = (if name == "JanLawen" then 999 else 0) }, 
-                    walls = wall1,
-                    currentLvl = "wall1",
-                    tileMap = mapWalls wall1,
-                    wEnemies = enemiesList,
-                    currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
-                    wInspects = inspectList
+    let w = World { 
+                   wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0, hMoney = (if name == "JanLawen" then 999 else 0) }, 
+                   walls = wall1,
+                   currentLvl = "wall1",
+                   tileMap = mapWalls wall1,
+                   wEnemies = enemiesList,
+                   currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
+                   wInspects = inspectList,
+                   wShops = shopList
                   }
     drawWorld w
     gameLoop w
