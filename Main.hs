@@ -24,11 +24,14 @@ module Main where
     [X] Way to check player status (To right side of map)
     [X] Up/Down Staircases
     [X] Specific enemies for each floor!!!!!
+    [X] Dialogue spots on floors (marked with a '?')
     [] Clean up code!!!!
     [] Make attributes matter
-    [] Make health potions
-    [] Remove gear from the ground
-    [] Multiple kinds of Enemies
+    [] Add a shop or a use for money
+    [] Random item placement
+    [X] Add health potions
+    [X] Remove gear from the ground
+    [?] Multiple kinds of Enemies
     [] Make a better title screen
     [] Make it FUN!!!!
     [] Boss at the end called "The Relayer"
@@ -55,8 +58,8 @@ module Main where
 
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
-           "|<           s        |     |    >   |",
-           "|               O     ---|---    $   |",
+           "|<                    |     |    >   |",
+           "|               p     ---|---    $   |",
            "|          p             +           |",
            "|                 $   ---|---        |",
            "|       $             |     | $      |",
@@ -86,17 +89,43 @@ module Main where
           "|                  |                 |",
           "|                  |               < |",
           "|                $-+-$               |",
-          "|                  |                 |",
+          "|>                 |                 |",
           "--------------------------------------"]
 
-  testEnemy :: Int -> Int -> Enemy
-  testEnemy x y = Enemy { eCoord = (x, y), eOldCoord = (0, 0), eHealth = 3 }
+  wall5 :: [String]
+  wall5 = ["--------------------------------------",
+          "|         I         I                |",
+          "|         IIIII+IIIII                |",
+          "|                                  > |",
+          "|              ?                     |",
+          "|<                                   |",
+          "--------------------------------------"]
+
+  spawnEnemy :: Int -> Int -> Enemy
+  spawnEnemy x y = Enemy { eCoord = (x, y), eOldCoord = (0, 0), eHealth = 3 }
 
   wallsList :: M.Map String [String]
-  wallsList = M.fromList [("wall1", wall1), ("wall2", wall2), ("wall3", wall3), ("wall4", wall4)]
+  wallsList = M.fromList [
+                          ("wall1", wall1),
+                          ("wall2", wall2),
+                          ("wall3", wall3),
+                          ("wall4", wall4),
+                          ("wall5", wall5)
+                         ]
 
   enemiesList :: M.Map String [Enemy]
-  enemiesList = M.fromList [("wall1", [testEnemy 33 3]), ("wall2", [testEnemy 4 4]), ("wall3", [testEnemy 8 2]), ("wall4", [testEnemy 1 1])]
+  enemiesList = M.fromList [
+                            ("wall1", [spawnEnemy 33 3]),
+                            ("wall2", [spawnEnemy 4 4]),
+                            ("wall3", [spawnEnemy 8 2]),
+                            ("wall4", [spawnEnemy 1 1]),
+                            ("wall5", [spawnEnemy 14 1])
+                           ]
+
+  inspectList :: M.Map (Coord, String) [String]
+  inspectList = M.fromList [ 
+                            (((15,4), "wall5"), ["Hello My name is Jan Lawen!", "I am the disgraced polka king of Pennsylvania"])
+                           ]
 
   {-
   Constants that must be used when determining a position
@@ -125,6 +154,9 @@ module Main where
   sub :: Class
   sub = Sub { sConst = 10, sStr = 2, sDex = 15, sInt = 1 }
 
+  polkaKing :: Class
+  polkaKing = PolkaKing { pConst = 17, pStr = 2, pDex = 11, pInt = 900 }
+
   debug :: String -> IO ()
   debug s = appendFile "test.txt" (s ++ "\n")
 
@@ -132,8 +164,6 @@ module Main where
   flipCoord (x, y) = (y, x)
 
   getItem :: Char -> Item
-  getItem 's' = Sword
-  getItem 'O' = Shield
   getItem 'p' = Potion
   getItem '$' = Coin
   getItem _ = Null
@@ -152,6 +182,7 @@ module Main where
                                      '-' -> True
                                      '|' -> True
                                      '+' -> True
+                                     'I' -> True
                                      _ -> False
 
   findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
@@ -206,24 +237,28 @@ module Main where
     | c == knight = kConst c
     | c == thief = tConst c
     | c == sub = sConst c
+    | c == polkaKing = pConst c
     
   getStr :: Class -> Int
   getStr c
     | c == knight = kStr c
     | c == thief = tStr c
     | c == sub = sStr c
+    | c == polkaKing = pStr c
 
   getDex :: Class -> Int
   getDex c
     | c == knight = kDex c
     | c == thief = tDex c
     | c == sub = sDex c
+    | c == polkaKing = pDex c
 
   getInt :: Class -> Int
   getInt c
     | c == knight = kInt c
     | c == thief = tInt c
     | c == sub = sInt c
+    | c == polkaKing = pInt c
 
   isThatChar :: Coord -> Char -> M.Map Coord Char -> Bool
   isThatChar c ch m = case M.lookup c m of
@@ -292,6 +327,7 @@ module Main where
       '<' -> return (PlayerAction GoUp)
       'r' -> return (PlayerAction Rest)
       'z' -> return (PlayerAction Quaff)
+      ' ' -> return (PlayerAction Inspect)
       _  -> getInput
 
   handleExit :: World -> IO ()
@@ -435,6 +471,15 @@ module Main where
     let w' = if (Potion  `elem` inv) then (if (((hHealth h) + 10) >= maxHealth) then w { wHero = h { hHealth = maxHealth } } else w { wHero = h { hHealth = (hHealth h) + 10 } }) else w
     let w'' = w' { wHero = (wHero w') { items = delete Potion (items (wHero w')) } }
     gameLoop w''
+  handleEvent w (PlayerAction Inspect) = do
+    let t = case M.lookup ((flipCoord (hCoord (wHero w))), currentLvl w) (wInspects w) of {Just xs -> xs; Nothing -> [""]}
+    clearScreen
+    putStrLn "Message:"
+    putStrLn "========"
+    mapM_ putStrLn t
+    _ <- getInput
+    mapM_ (\_ -> putStrLn "                                 ") t
+    gameLoop w
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -482,6 +527,7 @@ module Main where
 
   drawWorld :: World -> IO ()
   drawWorld w = do
+    clearScreen
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (currEnemies w)
@@ -490,8 +536,8 @@ module Main where
     setCursorPosition 0 0
     putChar '-'
 
-  getClass :: IO Class
-  getClass = do
+  getClass :: String -> IO Class
+  getClass n = do
     setCursorPosition 0 0
     putStrLn "Pick a class"
     putStrLn "============"
@@ -500,11 +546,12 @@ module Main where
     putStrLn "c - Substitute Teacher"
     putStrLn "* - Random Class"
     c <- getChar
-    case c of
-      'a' -> return knight
-      'b' -> return thief
-      'c' -> return sub
-      '*' -> randChoice [knight, thief, sub]
+    let c' = case c of
+              'a' -> return knight
+              'b' -> return thief
+              'c' -> return sub
+              '*' -> randChoice [knight, thief, sub]
+    if (n == "JanLawen") then return polkaKing else c'
 
   showTitleScreen :: IO ()
   showTitleScreen = do { setCursorPosition 0 0; mapM_ (\s -> putStrLn s) titleStrings }
@@ -521,14 +568,15 @@ module Main where
     showTitleScreen
     _ <- getInput
     clearScreen
-    c <- getClass
+    c <- getClass name
     clearScreen
     let w = World { wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0 }, 
                     walls = wall1,
                     currentLvl = "wall1",
-                    tileMap = wall1Mapped,
+                    tileMap = mapWalls wall1,
                     wEnemies = enemiesList,
-                    currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es}
+                    currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
+                    wInspects = inspectList
                   }
     drawWorld w
     gameLoop w
