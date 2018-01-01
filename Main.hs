@@ -27,7 +27,7 @@ module Main where
     [X] Dialogue spots on floors (marked with a '?')
     [] Clean up code!!!!
     [] Make attributes matter
-    [] Add a shop or a use for money
+    [X] Add a shop or a use for money
     [] Random item placement
     [X] Add health potions
     [X] Remove gear from the ground
@@ -35,7 +35,7 @@ module Main where
     [] Make a better title screen
     [] Make it FUN!!!!
     [] Boss at the end called "The Relayer"
-    [] Branching paths?
+    [] Branching paths
     [X] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
     [X] Score displayed at end/death
@@ -45,30 +45,33 @@ module Main where
   -}
 
   titleStrings :: [String]
-  titleStrings = ["{===================}                              ",
-                  "                                                  ",
-                  "       Vauxhall                                   ",
-                  "                                                   ",
-                  "      Written By:                                  ",
-                  "        Henning                                    ",
-                  "         Tonko                                     ",
-                  "                                                  ",
-                  "                                                   ",
-                  "     \'a\' to begin                                ",
-                  "{===================}"]
+  titleStrings = [
+                  "                                                                ",
+                  "                                                                ",
+                  "              {===================}                             ",
+                  "                                                                ",
+                  "                     Vauxhall                                   ",
+                  "                                                                ",
+                  "                    Written By:                                 ",
+                  "                      Henning                                   ",
+                  "                       Tonko                                    ",
+                  "                                                                ",
+                  "                                                                ",
+                  "                   \'a\' to begin                               ",
+                  "              {===================}                             "]
 
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
            "|<                    |     |    >   |",
-           "|               p     ---|---    $   |",
-           "|          p             +           |",
-           "|                 $   ---|---        |",
-           "|       $             |     | $      |",
+           "|                     ---|---        |",
+           "|                        +           |",
+           "|                     ---|---        |",
+           "|                     |     |        |",
            "-----------------------     ----------"]
 
   wall2 :: [String]
   wall2 = ["--------------------------------------",
-           "|>                    |$$$$$|    <   |",
+           "|>                    |     |    <   |",
            "|                     ---+---        |",
            "|                                    |",
            "|                                    |",
@@ -201,6 +204,19 @@ module Main where
   isAShopItem w c l = case M.lookup (c, l) (wShops w) of
                        Nothing -> False
                        Just t -> True
+
+  isOkToPlace :: M.Map Coord Char -> [(Coord, Char)]
+  isOkToPlace m = filter (\(_, ch) -> ch == ' ') m'
+    where
+      m' = M.toList m
+
+  spawnItems :: M.Map Coord Char -> Int -> IO [(Coord, Item)]
+  spawnItems m n = do
+    let okSpots = isOkToPlace m
+    placeOfItems <- mapM (\_ -> randChoice okSpots) [1..n] -- [(Coord, Char)]
+    i <- randChoice [Coin, Coin, Potion]
+    let spawnedItems = map (\((x, y), _) -> ((x, y), i)) placeOfItems -- [Coord, Item]
+    return spawnedItems
 
   findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
   findEnemyByCoord es c
@@ -408,12 +424,12 @@ module Main where
              _ -> (hCoord (wHero w))
     gameLoop w { tileMap = changeTile t 'o' '+' (tileMap w) }
   handleEvent w (PlayerAction PickUp) = do
-    let i = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
-             Nothing -> ' '
+    let i = case M.lookup (flipCoord (hCoord (wHero w))) (wItems w) of
+             Nothing -> Null
              Just c -> c
-    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1), hMoney = (hMoney (wHero w)) + (if i == '$' then (5) else 0)}
+    let newHero = (wHero w) { items = (items (wHero w)) ++ [i], hScore = (hScore (wHero w)) + (if i == Coin then 10 else 1), hMoney = (hMoney (wHero w)) + (if i == Coin then (5) else 0)}
     let oldHero = (wHero w)
-    if (isAShopItem w (flipCoord (hCoord (wHero w))) (currentLvl w)) then gameLoop w else gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then oldHero else newHero }    
+    if (isAShopItem w (flipCoord (hCoord (wHero w))) (currentLvl w)) then gameLoop w else gameLoop w { wItems = M.delete (flipCoord (hCoord (wHero w))) (wItems w), wHero = if i == Null then oldHero else newHero }    
   handleEvent w (PlayerAction ShowInv) = do
     setCursorPosition 0 0
     putStrLn "Inventory"
@@ -441,7 +457,10 @@ module Main where
     let nextEnemies = case M.lookup nextStr (wEnemies w) of
                        Nothing -> (currEnemies w)
                        Just es -> es
+    num <- randomRIO (1, 5)
+    is <- spawnItems (mapWalls nextWalls) num
     let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls, currEnemies = nextEnemies, wEnemies = M.insert (currentLvl w) (currEnemies w) (wEnemies w) } else w
+    let w'' = w' { wItems = M.fromList is }
     gameLoop w'
   handleEvent w (PlayerAction GoUp) = do
     let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
@@ -454,8 +473,10 @@ module Main where
     let lastEnemies = case M.lookup nextStr (wEnemies w) of
                        Nothing -> (currEnemies w)
                        Just es -> es
+    is <- spawnItems (mapWalls lastWalls) 5
     let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls, currEnemies = lastEnemies, wEnemies = M.insert (currentLvl w) (currEnemies w) (wEnemies w) } else w
-    gameLoop w'
+    let w'' = w' { wItems = M.fromList is }
+    gameLoop w''
   handleEvent w (PlayerAction Rest) = do
     h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
     gameLoop w { wHero = (wHero w) { hHealth = if (((hHealth (wHero w))) + h) >= 10 then 10 + (getConst (hClass (wHero w))) else (hHealth (wHero w)) + h } }
@@ -503,6 +524,12 @@ module Main where
     | length e == 1 = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'}
     | otherwise = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
 
+  drawItems :: [(Coord, Item)] -> IO ()
+  drawItems m = do
+    mapM_ (\((x, y), i) -> do { setCursorPosition y x; putChar (getTile i)}) m
+    where
+      getTile i = case i of { Potion -> 'p'; Coin -> '$' }
+
   drawStats :: Hero -> IO ()
   drawStats h = do
     setCursorPosition 0 50
@@ -533,6 +560,7 @@ module Main where
     setCursorPosition 0 0
     drawMap (tileMap w)
     drawEnemies (currEnemies w)
+    drawItems (M.toList $ wItems w)
     setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
     putChar '@'
     setCursorPosition 0 0
@@ -572,11 +600,13 @@ module Main where
     clearScreen
     c <- getClass name
     clearScreen
+    is <- spawnItems (mapWalls wall1) 5
     let w = World { 
                    wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0, hMoney = (if name == "JanLawen" then 999 else 0) }, 
                    walls = wall1,
                    currentLvl = "wall1",
                    tileMap = mapWalls wall1,
+                   wItems = M.fromList is,
                    wEnemies = enemiesList,
                    currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
                    wInspects = inspectList,

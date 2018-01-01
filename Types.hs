@@ -49,6 +49,7 @@ module Types where
                 walls :: [String],
                 currentLvl :: String,
                 tileMap :: M.Map Coord Char,
+                wItems :: M.Map Coord Item,
                 wEnemies :: M.Map String [Enemy],
                 currEnemies :: [Enemy],
                 wInspects :: M.Map (Coord, String) [String],
