@@ -510,7 +510,7 @@ module Main where
     if (hHealth (wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
-      Exit -> handleExit w'
+      Exit -> do { putStrLn "Are you sure you want to quit? (y/n)"; c <- getChar; if c == 'y' then handleExit w' else handleEvent w' (PlayerAction Rest) }
       e -> handleEvent w' e
 
   drawMap :: M.Map Coord Char -> IO ()
