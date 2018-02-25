@@ -11,31 +11,31 @@ module Types where
     show Null = "Null"
 
   data Class = Knight {
-                kConst :: Int,
-                kStr :: Int,
-                kDex :: Int,
-                kInt :: Int
+                _kConst :: Int,
+                _kStr :: Int,
+                _kDex :: Int,
+                _kInt :: Int
                }
                |
                Thief {
-                tConst :: Int,
-                tStr :: Int,
-                tDex :: Int,
-                tInt :: Int
+                _tConst :: Int,
+                _tStr :: Int,
+                _tDex :: Int,
+                _tInt :: Int
                }
                |
                Sub {
-                sConst :: Int,
-                sStr :: Int,
-                sDex :: Int,
-                sInt :: Int
+                _sConst :: Int,
+                _sStr :: Int,
+                _sDex :: Int,
+                _sInt :: Int
                }
                |
                PolkaKing {
-                 pConst :: Int,
-                 pStr :: Int,
-                 pDex :: Int,
-                 pInt :: Int
+                 _pConst :: Int,
+                 _pStr :: Int,
+                 _pDex :: Int,
+                 _pInt :: Int
                } deriving Eq
 
   instance Show Class where
@@ -45,35 +45,35 @@ module Types where
     show (PolkaKing _ _ _ _) = "Polka King"
 
   data World = World {
-                wHero :: Hero,
-                walls :: [String],
-                currentLvl :: String,
-                tileMap :: M.Map Coord Char,
-                wItems :: M.Map Coord Item,
-                wEnemies :: M.Map String [Enemy],
-                currEnemies :: [Enemy],
-                wInspects :: M.Map (Coord, String) [String],
-                wShops :: M.Map (Coord, String) (Item, Int)
+                _wHero :: Hero,
+                _walls :: [String],
+                _currentLvl :: String,
+                _tileMap :: M.Map Coord Char,
+                _wItems :: M.Map Coord Item,
+                _wEnemies :: M.Map String [Enemy],
+                _currEnemies :: [Enemy],
+                _wInspects :: M.Map (Coord, String) [String],
+                _wShops :: M.Map (Coord, String) (Item, Int)
                } deriving Show
 
   data Enemy = Enemy {
-                eCoord :: Coord,
-                eOldCoord :: Coord,
-                eHealth :: Int
+                _eCoord :: Coord,
+                _eOldCoord :: Coord,
+                _eHealth :: Int
                } deriving (Show, Eq)
 
   data Hero = Hero {
-                hName :: String,
-                hCoord :: Coord,
-                hOldCoord :: Coord,
-                hHealth :: Int,
-                hDmg :: Int,
-                hExp :: Int,
-                hLvl :: Int,
-                hClass :: Class,
-                items :: [Item],
-                hScore :: Int,
-                hMoney :: Int
+                _hName :: String,
+                _hCoord :: Coord,
+                _hOldCoord :: Coord,
+                _hHealth :: Int,
+                _hDmg :: Int,
+                _hExp :: Int,
+                _hLvl :: Int,
+                _hClass :: Class,
+                _items :: [Item],
+                _hScore :: Int,
+                _hMoney :: Int
               } deriving Show
 
   data Direction = Up | Down | Left | Right | Stay deriving Show

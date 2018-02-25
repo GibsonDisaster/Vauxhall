@@ -106,7 +106,7 @@ module Main where
           "--------------------------------------"]
 
   spawnEnemy :: Coord -> Int -> Enemy
-  spawnEnemy c h = Enemy { eCoord = c, eOldCoord = (0, 0), eHealth = h }
+  spawnEnemy c h = Enemy { _eCoord = c, _eOldCoord = (0, 0), _eHealth = h }
 
   wallsList :: M.Map String [String]
   wallsList = M.fromList [
@@ -161,16 +161,16 @@ module Main where
   dConst = (-1, 1)
 
   knight :: Class
-  knight = Knight { kConst = 15, kStr = 4, kDex = 7, kInt = 3 }
+  knight = Knight { _kConst = 15, _kStr = 4, _kDex = 7, _kInt = 3 }
 
   thief :: Class
-  thief = Thief { tConst = 8, tStr = 3, tDex = 10, tInt = 6 }
+  thief = Thief { _tConst = 8, _tStr = 3, _tDex = 10, _tInt = 6 }
 
   sub :: Class
-  sub = Sub { sConst = 10, sStr = 2, sDex = 15, sInt = 1 }
+  sub = Sub { _sConst = 10, _sStr = 2, _sDex = 15, _sInt = 1 }
 
   polkaKing :: Class
-  polkaKing = PolkaKing { pConst = 17, pStr = 2, pDex = 11, pInt = 900 }
+  polkaKing = PolkaKing { _pConst = 17, _pStr = 2, _pDex = 11, _pInt = 900 }
 
   debug :: String -> IO ()
   debug s = appendFile "test.txt" (s ++ "\n")
@@ -201,7 +201,7 @@ module Main where
                                      _ -> False
 
   isAShopItem :: World -> Coord -> String -> Bool
-  isAShopItem w c l = case M.lookup (c, l) (wShops w) of
+  isAShopItem w c l = case M.lookup (c, l) (_wShops w) of
                        Nothing -> False
                        Just t -> True
 
@@ -221,11 +221,11 @@ module Main where
   findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
   findEnemyByCoord es c
     | length es == 0 = Nothing
-    | length es == 1 = if (eCoord (head es)) == (eCoord dummy) then Just (head es) else Nothing
-    | (eCoord (head es)) == (eCoord dummy) = Just (head es)
+    | length es == 1 = if (_eCoord (head es)) == (_eCoord dummy) then Just (head es) else Nothing
+    | (_eCoord (head es)) == (_eCoord dummy) = Just (head es)
     | otherwise = findEnemyByCoord (tail es) c
       where
-        dummy = Enemy { eCoord = c, eOldCoord = (1, 1), eHealth = 10 }
+        dummy = Enemy { _eCoord = c, _eOldCoord = (1, 1), _eHealth = 10 }
 
   getNextLvl :: String -> String
   getNextLvl lvl = "wall" ++ show nextNum
@@ -263,35 +263,35 @@ module Main where
   (|-|) (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
 
   dropQuotes :: String -> String
-  dropQuotes str = (drop 1 . reverse . drop 1 . reverse) str
+  dropQuotes str = (init . drop 1) str
 
   getConst :: Class -> Int
   getConst c
-    | c == knight = kConst c
-    | c == thief = tConst c
-    | c == sub = sConst c
-    | c == polkaKing = pConst c
+    | c == knight = _kConst c
+    | c == thief = _tConst c
+    | c == sub = _sConst c
+    | c == polkaKing = _pConst c
     
   getStr :: Class -> Int
   getStr c
-    | c == knight = kStr c
-    | c == thief = tStr c
-    | c == sub = sStr c
-    | c == polkaKing = pStr c
+    | c == knight = _kStr c
+    | c == thief = _tStr c
+    | c == sub = _sStr c
+    | c == polkaKing = _pStr c
 
   getDex :: Class -> Int
   getDex c
-    | c == knight = kDex c
-    | c == thief = tDex c
-    | c == sub = sDex c
-    | c == polkaKing = pDex c
+    | c == knight = _kDex c
+    | c == thief = _tDex c
+    | c == sub = _sDex c
+    | c == polkaKing = _pDex c
 
   getInt :: Class -> Int
   getInt c
-    | c == knight = kInt c
-    | c == thief = tInt c
-    | c == sub = sInt c
-    | c == polkaKing = pInt c
+    | c == knight = _kInt c
+    | c == thief = _tInt c
+    | c == sub = _sInt c
+    | c == polkaKing = _pInt c
 
   isThatChar :: Coord -> Char -> M.Map Coord Char -> Bool
   isThatChar c ch m = case M.lookup c m of
@@ -314,28 +314,28 @@ module Main where
   moveEnemy :: World -> Enemy -> IO Enemy
   moveEnemy w e = do
     dir <- randChoice [Up, Down, Left, Right, Stay, Stay, Stay]
-    let newCoord = (flipCoord (getVect dir) |+| (eCoord e))
-    return e { eCoord = if (isImpassible (tileMap w) (newCoord)) then (eCoord e) else newCoord, eOldCoord = (eOldCoord e) }
+    let newCoord = (flipCoord (getVect dir) |+| (_eCoord e))
+    return e { _eCoord = if (isImpassible (_tileMap w) (newCoord)) then (_eCoord e) else newCoord, _eOldCoord = (_eOldCoord e) }
 
   moveEnemies :: World -> [Enemy] -> IO [Enemy]
   moveEnemies w es = mapM (moveEnemy w) es
 
   updateEnemies :: [Enemy] -> Enemy -> Coord -> [Enemy]
-  updateEnemies es e c = let foundE = case findEnemyByCoord es (eCoord e) of
+  updateEnemies es e c = let foundE = case findEnemyByCoord es (_eCoord e) of
                                        Just e -> e
                                        Nothing -> undefined
-                             removeE = filter (\en -> (eHealth en > 0)) (filter (/= foundE) es)
-                             newE = removeE ++ [e { eHealth = (eHealth e) - 1 }] in newE
+                             removeE = filter (\en -> (_eHealth en > 0)) (filter (/= foundE) es)
+                             newE = removeE ++ [e { _eHealth = (_eHealth e) - 1 }] in newE
 
   deadEnemies :: [Enemy] -> [Enemy]
   deadEnemies es
     | length es == 0 = []
-    | length es == 1 = if (eHealth (head es)) <= 0 then [] else [(head es)]
-    | otherwise = (if (eHealth (head es)) <= 0 then [] else [(head es)]) ++ deadEnemies (tail es)
+    | length es == 1 = if (_eHealth (head es)) <= 0 then [] else [(head es)]
+    | otherwise = (if (_eHealth (head es)) <= 0 then [] else [(head es)]) ++ deadEnemies (tail es)
 
   checkLevel :: Hero -> Hero
   checkLevel h
-    | (hExp h) >= 20 = h { hExp = 0, hLvl = (hLvl h) + 1 }
+    | (_hExp h) >= 20 = h { _hExp = 0, _hLvl = (_hLvl h) + 1 }
     | otherwise = h
 
   getInput :: IO Event
@@ -384,111 +384,111 @@ module Main where
     putStrLn "|     |     |"
     putStrLn "-------------"
     setCursorPosition 5 3
-    putStrLn (dropQuotes (show $ hName (wHero w)))
+    putStrLn (dropQuotes (show $ _hName (_wHero w)))
     setCursorPosition 13 0
-    putStrLn ("Your Score was: " ++ (show $ hScore (wHero w)))
+    putStrLn ("Your Score was: " ++ (show $ _hScore (_wHero w)))
     showCursor
     setSGR [Reset]
 
   handleEvent :: World -> Event -> IO ()
   handleEvent w (Dir d) = do
-    ems <- moveEnemies w (currEnemies w)
-    let eFighting = findEnemyByCoord (currEnemies w) (flipCoord newHCoord)
+    ems <- moveEnemies w (_currEnemies w)
+    let eFighting = findEnemyByCoord (_currEnemies w) (flipCoord newHCoord)
     case eFighting of
-     Just e -> gameLoop w { wHero = (wHero w) { hHealth = (hHealth (wHero w)) - 1, hExp = (hExp (wHero w)) + 2, hScore = (hScore (wHero w)) + 2 }, currEnemies = (updateEnemies (currEnemies w) e newHCoord)}
-     Nothing -> gameLoop w { wHero = if (isImpassible (tileMap w) (flipCoord newHCoord)) then (wHero w) else newH, currEnemies = ems }
+     Just e -> gameLoop w { _wHero = (_wHero w) { _hHealth = (_hHealth (_wHero w)) - 1, _hExp = (_hExp (_wHero w)) + 2, _hScore = (_hScore (_wHero w)) + 2 }, _currEnemies = (updateEnemies (_currEnemies w) e newHCoord)}
+     Nothing -> gameLoop w { _wHero = if (isImpassible (_tileMap w) (flipCoord newHCoord)) then (_wHero w) else newH, _currEnemies = ems }
     where
-      oldH = hCoord (wHero w)
+      oldH = _hCoord (_wHero w)
       newHCoord = case d of
                    Left -> (0, -1) |+| oldH
                    Right -> (0, 1) |+| oldH
                    Up -> (-1, 0) |+| oldH
                    Down -> (1, 0) |+| oldH
-      newH = (wHero w) { hCoord = newHCoord, hOldCoord = oldH, hHealth = hHealth (wHero w), items = items (wHero w)}
+      newH = (_wHero w) { _hCoord = newHCoord, _hOldCoord = oldH, _hHealth = _hHealth (_wHero w), _items = _items (_wHero w)}
   handleEvent w (PlayerAction OpenDoor) = do
     dir <- getInput
     let t = case dir of
-             Dir Right -> (0, 1) |+| (flipCoord (hCoord (wHero w)) |+| rConst)
-             Dir Left -> (0, -1) |+| (flipCoord (hCoord (wHero w)) |+| lConst)
-             Dir Up -> (-1, 0) |+| (flipCoord (hCoord (wHero w)) |+| uConst)
-             Dir Down -> (1, 0) |+| (flipCoord (hCoord (wHero w)) |+| dConst)
-             _ -> (hCoord (wHero w))
-    gameLoop w { tileMap = changeTile t '+' 'o' (tileMap w)}
+             Dir Right -> (0, 1) |+| (flipCoord (_hCoord (_wHero w)) |+| rConst)
+             Dir Left -> (0, -1) |+| (flipCoord (_hCoord (_wHero w)) |+| lConst)
+             Dir Up -> (-1, 0) |+| (flipCoord (_hCoord (_wHero w)) |+| uConst)
+             Dir Down -> (1, 0) |+| (flipCoord (_hCoord (_wHero w)) |+| dConst)
+             _ -> (_hCoord (_wHero w))
+    gameLoop w { _tileMap = changeTile t '+' 'o' (_tileMap w)}
   handleEvent w (PlayerAction CloseDoor) = do
     dir <- getInput
     let t = case dir of
-             Dir Right -> (0, 1) |+| (flipCoord (hCoord (wHero w)) |+| rConst)
-             Dir Left -> (0, -1) |+| (flipCoord (hCoord (wHero w)) |+| lConst)
-             Dir Up -> (-1, 0) |+| (flipCoord (hCoord (wHero w)) |+| uConst)
-             Dir Down -> (1, 0) |+| (flipCoord (hCoord (wHero w)) |+| dConst)
-             _ -> (hCoord (wHero w))
-    gameLoop w { tileMap = changeTile t 'o' '+' (tileMap w) }
+             Dir Right -> (0, 1) |+| (flipCoord (_hCoord (_wHero w)) |+| rConst)
+             Dir Left -> (0, -1) |+| (flipCoord (_hCoord (_wHero w)) |+| lConst)
+             Dir Up -> (-1, 0) |+| (flipCoord (_hCoord (_wHero w)) |+| uConst)
+             Dir Down -> (1, 0) |+| (flipCoord (_hCoord (_wHero w)) |+| dConst)
+             _ -> (_hCoord (_wHero w))
+    gameLoop w { _tileMap = changeTile t 'o' '+' (_tileMap w) }
   handleEvent w (PlayerAction PickUp) = do
-    let i = case M.lookup (flipCoord (hCoord (wHero w))) (wItems w) of
+    let i = case M.lookup (flipCoord (_hCoord (_wHero w))) (_wItems w) of
              Nothing -> Null
              Just c -> c
-    let newHero = (wHero w) { items = (items (wHero w)) ++ [i], hScore = (hScore (wHero w)) + (if i == Coin then 10 else 1), hMoney = (hMoney (wHero w)) + (if i == Coin then (5) else 0)}
-    let oldHero = (wHero w)
-    if (isAShopItem w (flipCoord (hCoord (wHero w))) (currentLvl w)) then gameLoop w else gameLoop w { wItems = M.delete (flipCoord (hCoord (wHero w))) (wItems w), wHero = if i == Null then oldHero else newHero }    
+    let newHero = (_wHero w) { _items = (_items (_wHero w)) ++ [i], _hScore = (_hScore (_wHero w)) + (if i == Coin then 10 else 1), _hMoney = (_hMoney (_wHero w)) + (if i == Coin then (5) else 0)}
+    let oldHero = (_wHero w)
+    if (isAShopItem w (flipCoord (_hCoord (_wHero w))) (_currentLvl w)) then gameLoop w else gameLoop w { _wItems = M.delete (flipCoord (_hCoord (_wHero w))) (_wItems w), _wHero = if i == Null then oldHero else newHero }    
   handleEvent w (PlayerAction ShowInv) = do
     setCursorPosition 0 0
     putStrLn "Inventory"
     putStrLn "========="
-    mapM_ putStrLn (map show $ filter (/= Coin) (items (wHero w)))
+    mapM_ putStrLn (map show $ filter (/= Coin) (_items (_wHero w)))
     _ <- getInput
     setCursorPosition 0 0
-    mapM_ (\_ -> putStrLn "               ") (map show $ items (wHero w))
+    mapM_ (\_ -> putStrLn "               ") (map show $ _items (_wHero w))
     putStrLn "                 "
     putStrLn "                 "
     gameLoop w
   handleEvent w (PlayerAction ShowStats) = do
-    drawStats (wHero w)
+    drawStats (_wHero w)
     _ <- getInput
     clearScreen
     gameLoop w
   handleEvent w (PlayerAction GoDown) = do
-    let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
+    let t = case M.lookup (flipCoord (_hCoord (_wHero w))) (_tileMap w) of
              Nothing -> ' '
              Just c -> c
-    let nextStr = getNextLvl (currentLvl w)
+    let nextStr = getNextLvl (_currentLvl w)
     let nextWalls = case M.lookup nextStr wallsList of
-                     Nothing -> (walls w)
+                     Nothing -> (_walls w)
                      Just ch -> ch
-    let nextEnemies = case M.lookup nextStr (wEnemies w) of
-                       Nothing -> (currEnemies w)
+    let nextEnemies = case M.lookup nextStr (_wEnemies w) of
+                       Nothing -> (_currEnemies w)
                        Just es -> es
     num <- randomRIO (1, 5)
     is <- spawnItems (mapWalls nextWalls) num
-    let w' = if t == '>' then w { walls = (nextWalls), currentLvl = nextStr, tileMap = mapWalls nextWalls, currEnemies = nextEnemies, wEnemies = M.insert (currentLvl w) (currEnemies w) (wEnemies w) } else w
-    let w'' = w' { wItems = M.fromList is }
+    let w' = if t == '>' then w { _walls = (nextWalls), _currentLvl = nextStr, _tileMap = mapWalls nextWalls, _currEnemies = nextEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) } else w
+    let w'' = w' { _wItems = M.fromList is }
     gameLoop w'
   handleEvent w (PlayerAction GoUp) = do
-    let t = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
+    let t = case M.lookup (flipCoord (_hCoord (_wHero w))) (_tileMap w) of
               Nothing -> ' '
               Just c -> c
-    let nextStr = getLastLvl (currentLvl w)
+    let nextStr = getLastLvl (_currentLvl w)
     let lastWalls = case M.lookup nextStr wallsList of
-                      Nothing -> (walls w)
+                      Nothing -> (_walls w)
                       Just ch -> ch
-    let lastEnemies = case M.lookup nextStr (wEnemies w) of
-                       Nothing -> (currEnemies w)
+    let lastEnemies = case M.lookup nextStr (_wEnemies w) of
+                       Nothing -> (_currEnemies w)
                        Just es -> es
     is <- spawnItems (mapWalls lastWalls) 5
-    let w' = if t == '<' then w { walls = (lastWalls), currentLvl = nextStr, tileMap = mapWalls lastWalls, currEnemies = lastEnemies, wEnemies = M.insert (currentLvl w) (currEnemies w) (wEnemies w) } else w
-    let w'' = w' { wItems = M.fromList is }
+    let w' = if t == '<' then w { _walls = (lastWalls), _currentLvl = nextStr, _tileMap = mapWalls lastWalls, _currEnemies = lastEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) } else w
+    let w'' = w' { _wItems = M.fromList is }
     gameLoop w''
   handleEvent w (PlayerAction Rest) = do
     h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
-    gameLoop w { wHero = (wHero w) { hHealth = if (((hHealth (wHero w))) + h) >= 10 then 10 + (getConst (hClass (wHero w))) else (hHealth (wHero w)) + h } }
+    gameLoop w { _wHero = (_wHero w) { _hHealth = if (((_hHealth (_wHero w))) + h) >= 10 then 10 + (getConst (_hClass (_wHero w))) else (_hHealth (_wHero w)) + h } }
   handleEvent w (PlayerAction Quaff) = do
-    let h = (wHero w)
-    let inv = (items h)
-    let maxHealth = (getConst (hClass h)) + 10
-    let w' = if (Potion  `elem` inv) then (if (((hHealth h) + 10) >= maxHealth) then w { wHero = h { hHealth = maxHealth } } else w { wHero = h { hHealth = (hHealth h) + 10 } }) else w
-    let w'' = w' { wHero = (wHero w') { items = delete Potion (items (wHero w')) } }
+    let h = (_wHero w)
+    let inv = (_items h)
+    let maxHealth = (getConst (_hClass h)) + 10
+    let w' = if (Potion  `elem` inv) then (if (((_hHealth h) + 10) >= maxHealth) then w { _wHero = h { _hHealth = maxHealth } } else w { _wHero = h { _hHealth = (_hHealth h) + 10 } }) else w
+    let w'' = w' { _wHero = (_wHero w') { _items = delete Potion (_items (_wHero w')) } }
     gameLoop w''
   handleEvent w (PlayerAction Inspect) = do
-    let t = case M.lookup ((flipCoord (hCoord (wHero w))), currentLvl w) (wInspects w) of {Just xs -> xs; Nothing -> [""]}
+    let t = case M.lookup ((flipCoord (_hCoord (_wHero w))), _currentLvl w) (_wInspects w) of {Just xs -> xs; Nothing -> [""]}
     clearScreen
     putStrLn "Message:"
     putStrLn "========"
@@ -497,20 +497,20 @@ module Main where
     mapM_ (\_ -> putStrLn "                                 ") t
     gameLoop w
   handleEvent w (PlayerAction Buy) = do
-    let i = case M.lookup (flipCoord (hCoord (wHero w))) (tileMap w) of
+    let i = case M.lookup (flipCoord (_hCoord (_wHero w))) (_tileMap w) of
              Nothing -> ' '
              Just c -> c
-    let newHero = (wHero w) { items = (items (wHero w)) ++ [getItem i], hScore = (hScore (wHero w)) + (if i == '$' then 10 else 1), hMoney = (hMoney (wHero w)) - (case M.lookup (flipCoord (hCoord (wHero w)), currentLvl w) (wShops w) of { Nothing -> 0; Just (_, p) -> p })}
-    if (isAShopItem w (flipCoord (hCoord (wHero w))) (currentLvl w)) then gameLoop w { tileMap = changeTile (flipCoord (hCoord (wHero w))) i ' ' (tileMap w), wHero = if i == ' ' then (wHero w) else newHero } else gameLoop w  
+    let newHero = (_wHero w) { _items = (_items (_wHero w)) ++ [getItem i], _hScore = (_hScore (_wHero w)) + (if i == '$' then 10 else 1), _hMoney = (_hMoney (_wHero w)) - (case M.lookup (flipCoord (_hCoord (_wHero w)), _currentLvl w) (_wShops w) of { Nothing -> 0; Just (_, p) -> p })}
+    if (isAShopItem w (flipCoord (_hCoord (_wHero w))) (_currentLvl w)) then gameLoop w { _tileMap = changeTile (flipCoord (_hCoord (_wHero w))) i ' ' (_tileMap w), _wHero = if i == ' ' then (_wHero w) else newHero } else gameLoop w  
 
   gameLoop :: World -> IO ()
   gameLoop w = do
     drawWorld w
-    let w' = w { wHero = (checkLevel (wHero w)) { hMoney = (if (hName (wHero w)) == "JanLawen" then ((hMoney (wHero w)) - 1) else (hMoney (wHero w))) }, currEnemies = deadEnemies (currEnemies w) }
-    if (hHealth (wHero w)) <= 0 then handleExit w else putStr ""
+    let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if (_hName (_wHero w)) == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))) }, _currEnemies = deadEnemies (_currEnemies w) }
+    if (_hHealth (_wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
-      Exit -> do { putStrLn "Are you sure you want to quit? (y/n)"; c <- getChar; if c == 'y' then handleExit w' else handleEvent w' (PlayerAction Rest) }
+      Exit -> handleExit w'
       e -> handleEvent w' e
 
   drawMap :: M.Map Coord Char -> IO ()
@@ -521,8 +521,8 @@ module Main where
   drawEnemies :: [Enemy] -> IO ()
   drawEnemies e
     | length e == 0 = return ()
-    | length e == 1 = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'}
-    | otherwise = do {setCursorPosition (snd (eCoord (head e))) (fst (eCoord (head e))); putChar 'M'; setCursorPosition (snd (eOldCoord (head e))) (fst (eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
+    | length e == 1 = do {setCursorPosition (snd (_eCoord (head e))) (fst (_eCoord (head e))); putChar 'M'; setCursorPosition (snd (_eOldCoord (head e))) (fst (_eOldCoord (head e))); putChar 'M'}
+    | otherwise = do {setCursorPosition (snd (_eCoord (head e))) (fst (_eCoord (head e))); putChar 'M'; setCursorPosition (snd (_eOldCoord (head e))) (fst (_eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
 
   drawItems :: [(Coord, Item)] -> IO ()
   drawItems m = do
@@ -537,31 +537,31 @@ module Main where
     setCursorPosition 1 50
     putStrLn "============"
     setCursorPosition 2 50
-    putStrLn ("Class: " ++ show (hClass h)) 
+    putStrLn ("Class: " ++ show (_hClass h)) 
     setCursorPosition 3 50
     putStr ("        " ++ "  ")
     setCursorPosition 3 50
-    putStrLn ("Health: " ++ show (hHealth h))
+    putStrLn ("Health: " ++ show (_hHealth h))
     setCursorPosition 4 50
-    putStrLn ("Exp: " ++ show (hExp h))
+    putStrLn ("Exp: " ++ show (_hExp h))
     setCursorPosition 5 50
-    putStrLn ("Level: " ++ show (hLvl h))
+    putStrLn ("Level: " ++ show (_hLvl h))
     setCursorPosition 6 50
-    putStrLn ("Money: $" ++ show(hMoney h))
+    putStrLn ("Money: $" ++ show(_hMoney h))
     setCursorPosition 0 75
-    putStrLn ((hName h) ++ "\'s Score")
+    putStrLn ((_hName h) ++ "\'s Score")
     setCursorPosition 1 75
     putStrLn "============"
     setCursorPosition 2 75
-    putStrLn (show (hScore h) ++ " pts")
+    putStrLn (show (_hScore h) ++ " pts")
 
   drawWorld :: World -> IO ()
   drawWorld w = do
     setCursorPosition 0 0
-    drawMap (tileMap w)
-    drawEnemies (currEnemies w)
-    drawItems (M.toList $ wItems w)
-    setCursorPosition (fst $ hCoord (wHero w)) (snd $ hCoord (wHero w))
+    drawMap (_tileMap w)
+    drawEnemies (_currEnemies w)
+    drawItems (M.toList $ _wItems w)
+    setCursorPosition (fst $ _hCoord (_wHero w)) (snd $ _hCoord (_wHero w))
     putChar '@'
     setCursorPosition 0 0
     putChar '-'
@@ -602,15 +602,15 @@ module Main where
     clearScreen
     is <- spawnItems (mapWalls wall1) 5
     let w = World { 
-                   wHero = Hero {hName = name, hCoord = (2, 1), hOldCoord = (30, 0), hHealth = 10 + (getConst c), hDmg = getStr c, hExp = 0, hLvl = 1, hClass = c, items = [], hScore = 0, hMoney = (if name == "JanLawen" then 999 else 0) }, 
-                   walls = wall1,
-                   currentLvl = "wall1",
-                   tileMap = mapWalls wall1,
-                   wItems = M.fromList is,
-                   wEnemies = enemiesList,
-                   currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
-                   wInspects = inspectList,
-                   wShops = shopList
+                   _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0) }, 
+                   _walls = wall1,
+                   _currentLvl = "wall1",
+                   _tileMap = mapWalls wall1,
+                   _wItems = M.fromList is,
+                   _wEnemies = enemiesList,
+                   _currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
+                   _wInspects = inspectList,
+                   _wShops = shopList
                   }
     drawWorld w
     gameLoop w
