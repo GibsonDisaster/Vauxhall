@@ -4,5 +4,7 @@ ghc -o MacVauxhall Main.hs
 
 rm *.hi
 rm *.o
+rm *.dyn_o
+rm *.dyn_hi
 
-./MacVauxhall Henning
+./MacVauxhall

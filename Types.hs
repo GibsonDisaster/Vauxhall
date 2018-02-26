@@ -1,5 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Types where
   import qualified Data.Map as M
+  import Control.Lens hiding (getConst)
 
   type Coord = (Int, Int)
 
@@ -45,6 +48,7 @@ module Types where
     show (PolkaKing _ _ _ _) = "Polka King"
 
   data World = World {
+                _mode :: String,
                 _wHero :: Hero,
                 _walls :: [String],
                 _currentLvl :: String,
@@ -52,6 +56,7 @@ module Types where
                 _wItems :: M.Map Coord Item,
                 _wEnemies :: M.Map String [Enemy],
                 _currEnemies :: [Enemy],
+                _wStairs :: [Staircase],
                 _wInspects :: M.Map (Coord, String) [String],
                 _wShops :: M.Map (Coord, String) (Item, Int)
                } deriving Show
@@ -75,6 +80,16 @@ module Types where
                 _hScore :: Int,
                 _hMoney :: Int
               } deriving Show
+
+  data Staircase = Staircase {
+                  _sDest :: String,
+                  _sCoord :: Coord
+                } deriving Show
+
+  makeLenses ''World
+  makeLenses ''Enemy
+  makeLenses ''Hero
+  makeLenses ''Staircase
 
   data Direction = Up | Down | Left | Right | Stay deriving Show
 

@@ -2,9 +2,9 @@
 
 ## How To Play
 1) Enter the directory containing the Vauxhall binary file
-2) Run it using "./Vauxhall Name" (Substituting "Name" for your players name)
+2) Run it using "./Vauxhall Name Mode" (Substituting "Name" for your players name, and "Mode" for ascii or unicode)
 
-Ex: ```./Vauxhall Henning```
+Ex: ```./Vauxhall Henning ascii```
 
 Play with your Terminal window in fullscreen to avoid rendering issues
 

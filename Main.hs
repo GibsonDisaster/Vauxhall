@@ -1,6 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
   import Prelude hiding (Either(..))
   import Data.List (delete)
+  import Control.Lens hiding (getConst)
   import System.Console.ANSI
   import System.IO
   import System.Random
@@ -28,7 +31,7 @@ module Main where
     [] Clean up code!!!!
     [] Make attributes matter
     [X] Add a shop or a use for money
-    [] Random item placement
+    [X] Random item placement
     [X] Add health potions
     [X] Remove gear from the ground
     [?] Multiple kinds of Enemies
@@ -45,20 +48,19 @@ module Main where
   -}
 
   titleStrings :: [String]
-  titleStrings = [
-                  "                                                                ",
-                  "                                                                ",
-                  "              {===================}                             ",
-                  "                                                                ",
-                  "                     Vauxhall                                   ",
-                  "                                                                ",
-                  "                    Written By:                                 ",
-                  "                      Henning                                   ",
-                  "                       Tonko                                    ",
-                  "                                                                ",
-                  "                                                                ",
-                  "                   \'a\' to begin                               ",
-                  "              {===================}                             "]
+  titleStrings =  [ "                                        ",
+                    "                                        ",
+                    " __      __              _           _ _", 
+                    " \\ \\    / /             | |         | | |",
+                    "  \\ \\  / /_ _ _   ___  _| |__   __ _| | |",
+                    "   \\ \\/ / _` | | | \\ \\/ / '_ \\ / _` | | |",
+                    "    \\  / (_| | |_| |>  <| | | | (_| | | |",
+                    "     \\/ \\__,_|\\__,_/_/\\_\\_| |_|\\__,_|_|_|",
+                    "                                        ",
+                    "               By Henning Tonko             ",
+                    "                                        ",
+                    "              <press any button>        "
+                  ]
 
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
@@ -142,6 +144,11 @@ module Main where
                          (((44, 5), "wall4"), (Potion, 10))
                         ]
                         
+  {- Lens Functions -}
+
+  getHeroName :: World -> String
+  getHeroName = view (wHero . hName)
+
   {-
   Constants that must be used when determining a position
   because of ANSI's insane coordinate system.
@@ -159,6 +166,8 @@ module Main where
 
   dConst :: Coord
   dConst = (-1, 1)
+
+  {- Player Class List -}
 
   knight :: Class
   knight = Knight { _kConst = 15, _kStr = 4, _kDex = 7, _kInt = 3 }
@@ -190,6 +199,8 @@ module Main where
   getVect Right = (0, 1) |+| rConst
   getVect Stay = (0, 0)
 
+  {- Check to see if a given coord on the level is impassible (can't walk there) -}
+
   isImpassible :: M.Map Coord Char -> Coord -> Bool
   isImpassible m coord = case M.lookup coord m of
                           Nothing -> True
@@ -210,6 +221,8 @@ module Main where
     where
       m' = M.toList m
 
+  {- Spawn items in any blank tiles -}
+  
   spawnItems :: M.Map Coord Char -> Int -> IO [(Coord, Item)]
   spawnItems m n = do
     let okSpots = isOkToPlace m
@@ -237,11 +250,7 @@ module Main where
     where
       lastNum = (read (drop 4 lvl) :: Int) - 1
 
-  wall1Mapped :: M.Map Coord Char
-  wall1Mapped = foldl M.union M.empty $ mapWorld wall1 0
-
-  wall2Mapped :: M.Map Coord Char
-  wall2Mapped = foldl M.union M.empty $ mapWorld wall2 0
+  {- Next 3 functions are used to create a coordinate map to chars from a given list of strings -}
 
   mapWalls :: [String] -> M.Map Coord Char
   mapWalls walls = foldl M.union M.empty $ mapWorld walls 0
@@ -256,6 +265,8 @@ module Main where
     | length strs == 1 = [mapLevel M.empty 0 lvl (head strs)]
     | otherwise = [mapLevel M.empty 0 lvl (head strs)] ++ mapWorld (tail strs) (lvl + 1)
 
+  {- Coord manipulation -}
+
   (|+|) :: Coord -> Coord -> Coord
   (|+|) (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
@@ -264,6 +275,8 @@ module Main where
 
   dropQuotes :: String -> String
   dropQuotes str = (init . drop 1) str
+
+  {- Getters for class attributes -}
 
   getConst :: Class -> Int
   getConst c
@@ -293,6 +306,7 @@ module Main where
     | c == sub = _sInt c
     | c == polkaKing = _pInt c
 
+  {- Look up char in map and check if tile matches given char -}
   isThatChar :: Coord -> Char -> M.Map Coord Char -> Bool
   isThatChar c ch m = case M.lookup c m of
                        Nothing -> False
@@ -384,7 +398,7 @@ module Main where
     putStrLn "|     |     |"
     putStrLn "-------------"
     setCursorPosition 5 3
-    putStrLn (dropQuotes (show $ _hName (_wHero w)))
+    putStrLn (dropQuotes (show $ getHeroName w))
     setCursorPosition 13 0
     putStrLn ("Your Score was: " ++ (show $ _hScore (_wHero w)))
     showCursor
@@ -505,8 +519,8 @@ module Main where
 
   gameLoop :: World -> IO ()
   gameLoop w = do
-    drawWorld w
-    let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if (_hName (_wHero w)) == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))) }, _currEnemies = deadEnemies (_currEnemies w) }
+    if (_mode w) == "ascii" then drawWorld w else drawWorldUnicode w
+    let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if getHeroName w == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))) }, _currEnemies = deadEnemies (_currEnemies w) }
     if (_hHealth (_wHero w)) <= 0 then handleExit w else putStr ""
     event <- getInput
     case event of
@@ -518,20 +532,34 @@ module Main where
       where
         l = M.toList m
 
+  drawEnemiesUnicode :: [Enemy] -> IO ()
+  drawEnemiesUnicode e
+    | length e == 0 = return ()
+    | length e == 1 = do {setSGR [SetColor Foreground Dull Green]; setCursorPosition (snd (_eCoord (head e))) (fst (_eCoord (head e))); putStr "💀"; setCursorPosition (snd (_eOldCoord (head e))) (fst (_eOldCoord (head e))); putChar 'M'}
+    | otherwise = do {setSGR [SetColor Foreground Dull Green]; setCursorPosition (snd (_eCoord (head e))) (fst (_eCoord (head e))); putStr "💀"; setCursorPosition (snd (_eOldCoord (head e))) (fst (_eOldCoord (head e))); putChar 'M'; drawEnemiesUnicode (tail e)}
+
   drawEnemies :: [Enemy] -> IO ()
   drawEnemies e
     | length e == 0 = return ()
     | length e == 1 = do {setCursorPosition (snd (_eCoord (head e))) (fst (_eCoord (head e))); putChar 'M'; setCursorPosition (snd (_eOldCoord (head e))) (fst (_eOldCoord (head e))); putChar 'M'}
     | otherwise = do {setCursorPosition (snd (_eCoord (head e))) (fst (_eCoord (head e))); putChar 'M'; setCursorPosition (snd (_eOldCoord (head e))) (fst (_eOldCoord (head e))); putChar 'M'; drawEnemies (tail e)}
 
+  drawItemsUnicode :: [(Coord, Item)] -> IO ()
+  drawItemsUnicode m = do
+    setSGR [SetColor Foreground Vivid Yellow]
+    mapM_ (\((x, y), i) -> do { setCursorPosition y x; putStr (getTile i)}) m
+    where
+      getTile i = case i of { Potion -> "🍹"; Coin -> "💰" }
+
   drawItems :: [(Coord, Item)] -> IO ()
   drawItems m = do
     mapM_ (\((x, y), i) -> do { setCursorPosition y x; putChar (getTile i)}) m
     where
       getTile i = case i of { Potion -> 'p'; Coin -> '$' }
-
+    
   drawStats :: Hero -> IO ()
   drawStats h = do
+    setSGR [SetColor Foreground Vivid White]
     setCursorPosition 0 50
     putStrLn "Player Stats"
     setCursorPosition 1 50
@@ -554,6 +582,20 @@ module Main where
     putStrLn "============"
     setCursorPosition 2 75
     putStrLn (show (_hScore h) ++ " pts")
+
+  drawWorldUnicode :: World -> IO ()
+  drawWorldUnicode w = do
+    setSGR [SetColor Foreground Vivid White]
+    setCursorPosition 0 0
+    drawMap (_tileMap w)
+    drawEnemiesUnicode (_currEnemies w)
+    drawItemsUnicode (M.toList $ _wItems w)
+    setCursorPosition (fst $ _hCoord (_wHero w)) (snd $ _hCoord (_wHero w))
+    setSGR [SetColor Foreground Vivid Red]
+    if getHeroName w == "JanLawen" then putStr "💃" else putChar '@'
+    setCursorPosition 0 0
+    putChar '-'
+    setSGR [SetColor Foreground Vivid White]
 
   drawWorld :: World -> IO ()
   drawWorld w = do
@@ -582,10 +624,7 @@ module Main where
               'c' -> return sub
               '*' -> randChoice [knight, thief, sub]
     if (n == "JanLawen") then return polkaKing else c'
-
-  showTitleScreen :: IO ()
-  showTitleScreen = do { setCursorPosition 0 0; mapM_ (\s -> putStrLn s) titleStrings }
-  
+    
   main :: IO ()
   main = do
     hSetEcho stdin False
@@ -593,15 +632,19 @@ module Main where
     hSetBuffering stdout NoBuffering
     hideCursor
     setTitle "Vauxhall"
-    name <- head <$> getArgs
+    argLength <- length <$> getArgs
+    name <- if argLength > 0 then head <$> getArgs else return "Moz"
+    mode <- if argLength > 1 then (head . drop 1) <$> getArgs else return "ascii"
     clearScreen
-    showTitleScreen
+    setCursorPosition 0 0
+    mapM_ (\s -> putStrLn s) titleStrings
     _ <- getInput
     clearScreen
     c <- getClass name
     clearScreen
     is <- spawnItems (mapWalls wall1) 5
-    let w = World { 
+    let w = World {
+                   _mode = mode, 
                    _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0) }, 
                    _walls = wall1,
                    _currentLvl = "wall1",
@@ -609,8 +652,9 @@ module Main where
                    _wItems = M.fromList is,
                    _wEnemies = enemiesList,
                    _currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
+                   _wStairs = [],
                    _wInspects = inspectList,
                    _wShops = shopList
                   }
-    drawWorld w
+    if mode == "ascii" then drawWorld w else drawWorldUnicode w
     gameLoop w
