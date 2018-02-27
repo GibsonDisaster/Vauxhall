@@ -7,11 +7,14 @@ module Types where
   type Coord = (Int, Int)
 
   data Item = Potion | Coin | Null deriving Eq
+  
+  data Direction = Up | Down | Left | Right | Stay deriving Show
 
-  instance Show Item where
-    show Potion = "Potion"
-    show Coin = "Coin"
-    show Null = "Null"
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Debug deriving Show
+
+  data Event = Dir Direction | Exit | PlayerAction Action deriving Show
+  
+  data Effect = Dmg { _eDur :: Int } | None deriving (Show, Eq)
 
   data Class = Knight {
                 _kConst :: Int,
@@ -41,12 +44,6 @@ module Types where
                  _pInt :: Int
                } deriving Eq
 
-  instance Show Class where
-    show (Knight _ _ _ _) = "Knight"
-    show (Thief _ _ _ _) = "Thief"
-    show (Sub _ _ _ _) = "Sub"
-    show (PolkaKing _ _ _ _) = "Polka King"
-
   data World = World {
                 _mode :: String,
                 _wHero :: Hero,
@@ -56,9 +53,10 @@ module Types where
                 _wItems :: M.Map Coord Item,
                 _wEnemies :: M.Map String [Enemy],
                 _currEnemies :: [Enemy],
-                _wStairs :: [Staircase],
+                _wStairs :: M.Map String [Staircase],
                 _wInspects :: M.Map (Coord, String) [String],
-                _wShops :: M.Map (Coord, String) (Item, Int)
+                _wShops :: M.Map (Coord, String) (Item, Int),
+                _wTraps :: M.Map String [Trap]
                } deriving Show
 
   data Enemy = Enemy {
@@ -78,21 +76,35 @@ module Types where
                 _hClass :: Class,
                 _items :: [Item],
                 _hScore :: Int,
-                _hMoney :: Int
+                _hMoney :: Int,
+                _hEffects :: [Effect]
               } deriving Show
 
   data Staircase = Staircase {
-                  _sDest :: String,
-                  _sCoord :: Coord
-                } deriving Show
+                    _sDir :: Char,
+                    _sDest :: String,
+                    _sCoord :: Coord
+                   } deriving Show
+
+  data Trap = Trap {
+                _tEffect :: Effect,
+                _tCoord :: Coord,
+                _tDuration :: Int
+              } deriving Show
+
+  instance Show Class where
+    show (Knight _ _ _ _) = "Knight"
+    show (Thief _ _ _ _) = "Thief"
+    show (Sub _ _ _ _) = "Sub"
+    show (PolkaKing _ _ _ _) = "Polka King"
+
+  instance Show Item where
+    show Potion = "Potion"
+    show Coin = "Coin"
+    show Null = "Null"
 
   makeLenses ''World
   makeLenses ''Enemy
   makeLenses ''Hero
   makeLenses ''Staircase
-
-  data Direction = Up | Down | Left | Right | Stay deriving Show
-
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy deriving Show
-
-  data Event = Dir Direction | Exit | PlayerAction Action deriving Show
+  makeLenses ''Trap

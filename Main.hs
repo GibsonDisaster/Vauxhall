@@ -35,10 +35,10 @@ module Main where
     [X] Add health potions
     [X] Remove gear from the ground
     [?] Multiple kinds of Enemies
-    [] Make a better title screen
+    [X] Make a better title screen
     [] Make it FUN!!!!
     [] Boss at the end called "The Relayer"
-    [] Branching paths
+    [X] Branching paths
     [X] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
     [X] Score displayed at end/death
@@ -64,7 +64,7 @@ module Main where
 
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
-           "|<                    |     |    >   |",
+           "|                     |     |        |",
            "|                     ---|---        |",
            "|                        +           |",
            "|                     ---|---        |",
@@ -73,7 +73,7 @@ module Main where
 
   wall2 :: [String]
   wall2 = ["--------------------------------------",
-           "|>                    |     |    <   |",
+           "|                     |     |        |",
            "|                     ---+---        |",
            "|                                    |",
            "|                                    |",
@@ -82,9 +82,9 @@ module Main where
 
   wall3 :: [String]
   wall3 = ["--------------------------------------",
-           "|<            ~~~~~                  |",
+           "|             ~~~~~                  |",
            "|               ~~~~                 |",
-           "|                ~~~~              > |",
+           "|                ~~~~                |",
            "|                 ~~~~~              |",
            "|                 ~~~~~~~~           |",
            "--------------------------------------"]
@@ -93,19 +93,19 @@ module Main where
   wall4 = ["-------------------------------------   ----------",
           "|                                    |   |$ SHOP $|",
           "|                  |                 |---|--------|",
-          "|                  |               <   +    ppp   |",
+          "|                  |                   +    ppp   |",
           "|                $-+-$               |---| p  p   |",
-          "|>                 |                 |   |  p     |",
+          "|                  |                 |   |  p     |",
           "--------------------------------------   ----------"]
 
-  wall5 :: [String]
-  wall5 = ["--------------------------------------",
-          "|         I         I                |",
-          "|         IIIII+IIIII                |",
-          "|                                  > |",
-          "|              ?                     |",
-          "|<                                   |",
-          "--------------------------------------"]
+  janLawen :: [String]
+  janLawen = ["--------------------------------------",
+              "|         I         I                |",
+              "|         IIIII+IIIII                |",
+              "|                                    |",
+              "|              ?                     |",
+              "|                                    |",
+              "--------------------------------------"]
 
   spawnEnemy :: Coord -> Int -> Enemy
   spawnEnemy c h = Enemy { _eCoord = c, _eOldCoord = (0, 0), _eHealth = h }
@@ -116,7 +116,7 @@ module Main where
                           ("wall2", wall2),
                           ("wall3", wall3),
                           ("wall4", wall4),
-                          ("wall5", wall5)
+                          ("jan lawen", janLawen)
                          ]
 
   enemiesList :: M.Map String [Enemy]
@@ -125,12 +125,12 @@ module Main where
                             ("wall2", [spawnEnemy (4, 4) 7]),
                             ("wall3", [spawnEnemy (8, 2) 6, spawnEnemy (33, 5) 5]),
                             ("wall4", [spawnEnemy (1, 1) 9]),
-                            ("wall5", [spawnEnemy (14, 1) 90])
+                            ("jan lawen", [spawnEnemy (14, 1) 90])
                            ]
 
   inspectList :: M.Map (Coord, String) [String]
   inspectList = M.fromList [ 
-                            (((15,4), "wall5"), ["Hello My name is Jan Lawen!", "I am the disgraced polka king of Pennsylvania", "Wouldn't you like to be me?"])
+                            (((15,4), "jan lawen"), ["Hello My name is Jan Lawen!", "I am the disgraced polka king of Pennsylvania", "Wouldn't you like to be me?"])
                            ]
 
   shopList :: M.Map (Coord, String) (Item, Int)
@@ -143,6 +143,20 @@ module Main where
                          (((46, 4), "wall4"), (Potion, 10)),
                          (((44, 5), "wall4"), (Potion, 10))
                         ]
+
+  stairsList :: M.Map String [Staircase]
+  stairsList = M.fromList [
+                            ("wall1", [Staircase '>' "wall2" (1, 35)]),
+                            ("wall2", [Staircase '<' "wall1" (1, 35), Staircase '>' "wall3" (3, 4)]),
+                            ("wall3", [Staircase '<' "wall2" (3, 4), Staircase '>' "wall4" (1, 3), Staircase '>' "jan lawen" (1, 25)]),
+                            ("wall4", [Staircase '<' "wall3" (1, 3)]),
+                            ("jan lawen", [Staircase '<' "wall4" (1, 25)])
+                          ]
+
+  trapsList :: M.Map String [Trap]
+  trapsList = M.fromList [
+                          ("wall1", [Trap (Dmg 3) (1, 34) 10])
+                         ]
                         
   {- Lens Functions -}
 
@@ -199,8 +213,6 @@ module Main where
   getVect Right = (0, 1) |+| rConst
   getVect Stay = (0, 0)
 
-  {- Check to see if a given coord on the level is impassible (can't walk there) -}
-
   isImpassible :: M.Map Coord Char -> Coord -> Bool
   isImpassible m coord = case M.lookup coord m of
                           Nothing -> True
@@ -210,6 +222,14 @@ module Main where
                                      '+' -> True
                                      'I' -> True
                                      _ -> False
+
+  getTrapTile :: World -> Coord -> Effect
+  getTrapTile w c = if (length trap) > 0 then _tEffect (head trap) else None
+    where
+      traps = case M.lookup (_currentLvl w) (_wTraps w) of
+                Nothing -> []
+                Just t -> t
+      trap = filter (\t' -> c == (_tCoord t')) traps
 
   isAShopItem :: World -> Coord -> String -> Bool
   isAShopItem w c l = case M.lookup (c, l) (_wShops w) of
@@ -376,6 +396,7 @@ module Main where
       'z' -> return (PlayerAction Quaff)
       ' ' -> return (PlayerAction Inspect)
       'b' -> return (PlayerAction Buy)
+      '\t' -> return (PlayerAction Debug)
       _  -> getInput
 
   handleExit :: World -> IO ()
@@ -410,7 +431,7 @@ module Main where
     let eFighting = findEnemyByCoord (_currEnemies w) (flipCoord newHCoord)
     case eFighting of
      Just e -> gameLoop w { _wHero = (_wHero w) { _hHealth = (_hHealth (_wHero w)) - 1, _hExp = (_hExp (_wHero w)) + 2, _hScore = (_hScore (_wHero w)) + 2 }, _currEnemies = (updateEnemies (_currEnemies w) e newHCoord)}
-     Nothing -> gameLoop w { _wHero = if (isImpassible (_tileMap w) (flipCoord newHCoord)) then (_wHero w) else newH, _currEnemies = ems }
+     Nothing -> gameLoop w { _wHero = if (isImpassible (_tileMap w) (flipCoord newHCoord)) then (_wHero w) else effectedH, _currEnemies = ems }
     where
       oldH = _hCoord (_wHero w)
       newHCoord = case d of
@@ -418,7 +439,9 @@ module Main where
                    Right -> (0, 1) |+| oldH
                    Up -> (-1, 0) |+| oldH
                    Down -> (1, 0) |+| oldH
-      newH = (_wHero w) { _hCoord = newHCoord, _hOldCoord = oldH, _hHealth = _hHealth (_wHero w), _items = _items (_wHero w)}
+      effect = getTrapTile w (oldH)
+      newH = (_wHero w) { _hCoord = newHCoord, _hOldCoord = oldH, _hHealth = _hHealth (_wHero w), _items = _items (_wHero w)} 
+      effectedH = newH { _hEffects = (_hEffects (_wHero w)) ++ [effect] }
   handleEvent w (PlayerAction OpenDoor) = do
     dir <- getInput
     let t = case dir of
@@ -461,10 +484,11 @@ module Main where
     clearScreen
     gameLoop w
   handleEvent w (PlayerAction GoDown) = do
-    let t = case M.lookup (flipCoord (_hCoord (_wHero w))) (_tileMap w) of
-             Nothing -> ' '
-             Just c -> c
-    let nextStr = getNextLvl (_currentLvl w)
+    let t = case M.lookup (_currentLvl w) (_wStairs w) of
+             Nothing -> []
+             Just st -> st
+    let c_stair = head $ filter (\s -> (_sCoord s) == (_hCoord (_wHero w))) t
+    let nextStr = _sDest c_stair
     let nextWalls = case M.lookup nextStr wallsList of
                      Nothing -> (_walls w)
                      Just ch -> ch
@@ -473,14 +497,15 @@ module Main where
                        Just es -> es
     num <- randomRIO (1, 5)
     is <- spawnItems (mapWalls nextWalls) num
-    let w' = if t == '>' then w { _walls = (nextWalls), _currentLvl = nextStr, _tileMap = mapWalls nextWalls, _currEnemies = nextEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) } else w
+    let w' = w { _walls = (nextWalls), _currentLvl = nextStr, _tileMap = mapWalls nextWalls, _currEnemies = nextEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) }
     let w'' = w' { _wItems = M.fromList is }
     gameLoop w'
   handleEvent w (PlayerAction GoUp) = do
-    let t = case M.lookup (flipCoord (_hCoord (_wHero w))) (_tileMap w) of
-              Nothing -> ' '
-              Just c -> c
-    let nextStr = getLastLvl (_currentLvl w)
+    let t = case M.lookup (_currentLvl w) (_wStairs w) of
+              Nothing -> []
+              Just st -> st
+    let c_stair = head $ filter (\s -> (_sCoord s) == (_hCoord (_wHero w))) t
+    let nextStr = _sDest c_stair
     let lastWalls = case M.lookup nextStr wallsList of
                       Nothing -> (_walls w)
                       Just ch -> ch
@@ -488,7 +513,7 @@ module Main where
                        Nothing -> (_currEnemies w)
                        Just es -> es
     is <- spawnItems (mapWalls lastWalls) 5
-    let w' = if t == '<' then w { _walls = (lastWalls), _currentLvl = nextStr, _tileMap = mapWalls lastWalls, _currEnemies = lastEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) } else w
+    let w' = w { _walls = (lastWalls), _currentLvl = nextStr, _tileMap = mapWalls lastWalls, _currEnemies = lastEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) }
     let w'' = w' { _wItems = M.fromList is }
     gameLoop w''
   handleEvent w (PlayerAction Rest) = do
@@ -516,12 +541,15 @@ module Main where
              Just c -> c
     let newHero = (_wHero w) { _items = (_items (_wHero w)) ++ [getItem i], _hScore = (_hScore (_wHero w)) + (if i == '$' then 10 else 1), _hMoney = (_hMoney (_wHero w)) - (case M.lookup (flipCoord (_hCoord (_wHero w)), _currentLvl w) (_wShops w) of { Nothing -> 0; Just (_, p) -> p })}
     if (isAShopItem w (flipCoord (_hCoord (_wHero w))) (_currentLvl w)) then gameLoop w { _tileMap = changeTile (flipCoord (_hCoord (_wHero w))) i ' ' (_tileMap w), _wHero = if i == ' ' then (_wHero w) else newHero } else gameLoop w  
+  handleEvent w (PlayerAction Debug) = do
+    debug (show $ (_hCoord (_wHero w)))
+    gameLoop w
 
   gameLoop :: World -> IO ()
   gameLoop w = do
     if (_mode w) == "ascii" then drawWorld w else drawWorldUnicode w
-    let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if getHeroName w == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))) }, _currEnemies = deadEnemies (_currEnemies w) }
-    if (_hHealth (_wHero w)) <= 0 then handleExit w else putStr ""
+    let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if getHeroName w == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))), _hEffects = map (\e -> e { _eDur = (_eDur e) - 1 }) (filter (\e -> (_eDur e) > 0) ((filter (\e -> e /= None) (_hEffects (_wHero w))))) }, _currEnemies = deadEnemies (_currEnemies w) }
+    if (_hHealth (_wHero w)) <= 0 then handleExit w else return ()
     event <- getInput
     case event of
       Exit -> handleExit w'
@@ -559,7 +587,6 @@ module Main where
     
   drawStats :: Hero -> IO ()
   drawStats h = do
-    setSGR [SetColor Foreground Vivid White]
     setCursorPosition 0 50
     putStrLn "Player Stats"
     setCursorPosition 1 50
@@ -575,13 +602,29 @@ module Main where
     setCursorPosition 5 50
     putStrLn ("Level: " ++ show (_hLvl h))
     setCursorPosition 6 50
-    putStrLn ("Money: $" ++ show(_hMoney h))
+    putStrLn ("Money: $" ++ show (_hMoney h))
+    setCursorPosition 7 50
+    putStrLn $ "Effects: " ++ show (_hEffects h)
     setCursorPosition 0 75
     putStrLn ((_hName h) ++ "\'s Score")
     setCursorPosition 1 75
     putStrLn "============"
     setCursorPosition 2 75
     putStrLn (show (_hScore h) ++ " pts")
+
+  drawStairs :: World -> IO ()
+  drawStairs w = do
+    let st = case M.lookup (_currentLvl w) (_wStairs w) of
+              Nothing -> []
+              Just s -> s
+    mapM_ (\s' -> do { setCursorPosition (fst (_sCoord s')) (snd (_sCoord s')); putChar (_sDir s') } ) st
+
+  drawTraps :: World -> IO ()
+  drawTraps w = do
+    let ts = case M.lookup (_currentLvl w) (_wTraps w) of
+              Nothing -> []
+              Just t -> t
+    mapM_ (\t' -> do { setCursorPosition (fst (_tCoord t')) (snd (_tCoord t')); putChar '^' }) ts
 
   drawWorldUnicode :: World -> IO ()
   drawWorldUnicode w = do
@@ -590,6 +633,8 @@ module Main where
     drawMap (_tileMap w)
     drawEnemiesUnicode (_currEnemies w)
     drawItemsUnicode (M.toList $ _wItems w)
+    drawStairs w
+    drawTraps w
     setCursorPosition (fst $ _hCoord (_wHero w)) (snd $ _hCoord (_wHero w))
     setSGR [SetColor Foreground Vivid Red]
     if getHeroName w == "JanLawen" then putStr "💃" else putChar '@'
@@ -603,6 +648,8 @@ module Main where
     drawMap (_tileMap w)
     drawEnemies (_currEnemies w)
     drawItems (M.toList $ _wItems w)
+    drawStairs w
+    drawTraps w
     setCursorPosition (fst $ _hCoord (_wHero w)) (snd $ _hCoord (_wHero w))
     putChar '@'
     setCursorPosition 0 0
@@ -645,16 +692,17 @@ module Main where
     is <- spawnItems (mapWalls wall1) 5
     let w = World {
                    _mode = mode, 
-                   _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0) }, 
+                   _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0), _hEffects = [] }, 
                    _walls = wall1,
                    _currentLvl = "wall1",
                    _tileMap = mapWalls wall1,
                    _wItems = M.fromList is,
                    _wEnemies = enemiesList,
                    _currEnemies = case M.lookup "wall1" enemiesList of {Nothing -> []; Just es -> es},
-                   _wStairs = [],
+                   _wStairs = stairsList,
                    _wInspects = inspectList,
-                   _wShops = shopList
+                   _wShops = shopList,
+                   _wTraps = trapsList
                   }
     if mode == "ascii" then drawWorld w else drawWorldUnicode w
     gameLoop w
