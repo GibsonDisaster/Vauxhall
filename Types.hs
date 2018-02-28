@@ -10,11 +10,11 @@ module Types where
   
   data Direction = Up | Down | Left | Right | Stay deriving Show
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Debug deriving Show
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Debug deriving Show
 
   data Event = Dir Direction | Exit | PlayerAction Action deriving Show
   
-  data Effect = Dmg { _eDur :: Int } | None deriving (Show, Eq)
+  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | None deriving (Eq)
 
   data Class = Knight {
                 _kConst :: Int,
@@ -102,6 +102,11 @@ module Types where
     show Potion = "Potion"
     show Coin = "Coin"
     show Null = "Null"
+
+  instance Show Effect where
+    show None = ""
+    show (Dmg d) = "Dmg " ++ (show d) ++ "t"
+    show (Psn d) = "Psn " ++ (show d) ++ "t"
 
   makeLenses ''World
   makeLenses ''Enemy

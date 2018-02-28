@@ -9,7 +9,7 @@ Ex: ```./Vauxhall Henning ascii```
 Play with your Terminal window in fullscreen to avoid rendering issues
 
 ## Keys
-* wasd or hjkl - movement
+* wasd - movement
 * , - picks up item currently standing on
 * o + a direction key - opens door in specified direction
 * c + a direction key - closes door in specified direction
@@ -20,6 +20,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * z - Drinks a potion (healing you) if you have any potions
 * space bar - Interacts with a dialogue tile you are standing on, which is marked by a '?' on the map
 * 'b' - like ',' but used to buy items in a shop instead of picking them up
+* k + a direction key - Kick in given direction (damages enemy and pushes them in opposite direction)
 
 # Screenshots
 

@@ -28,16 +28,12 @@ module Main where
     [X] Up/Down Staircases
     [X] Specific enemies for each floor!!!!!
     [X] Dialogue spots on floors (marked with a '?')
-    [] Clean up code!!!!
-    [] Make attributes matter
     [X] Add a shop or a use for money
     [X] Random item placement
     [X] Add health potions
     [X] Remove gear from the ground
     [?] Multiple kinds of Enemies
     [X] Make a better title screen
-    [] Make it FUN!!!!
-    [] Boss at the end called "The Relayer"
     [X] Branching paths
     [X] Change wallsList to just accept a [(String, [String])] and then put it all together
     [X] Score kept throughout game 
@@ -45,6 +41,19 @@ module Main where
         - Killing enemies [X]
         - Picking up items [X]
         - Picking up gold [X]
+    [] Make it FUN!!!!
+    [] Boss at the end called "The Relayer"
+    [] Clean up code!!!!
+    [] Make attributes matter
+    [] Kick function (doors, enemies)
+    [] Save system
+    [] Spells
+    [] Make moving quicker
+    [] More items?
+    [] Fountains?
+    [] Implement more effects
+    [] Add a story?
+    [] Color code sprites depending on health
   -}
 
   titleStrings :: [String]
@@ -164,9 +173,11 @@ module Main where
   getHeroName = view (wHero . hName)
 
   {-
+
   Constants that must be used when determining a position
   because of ANSI's insane coordinate system.
   (I think this might actually be my fault)
+  
   -}
 
   rConst :: Coord
@@ -293,6 +304,8 @@ module Main where
   (|-|) :: Coord -> Coord -> Coord
   (|-|) (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
 
+  {- Stripping a weird string of extra quote marks -}
+
   dropQuotes :: String -> String
   dropQuotes str = (init . drop 1) str
 
@@ -327,6 +340,7 @@ module Main where
     | c == polkaKing = _pInt c
 
   {- Look up char in map and check if tile matches given char -}
+
   isThatChar :: Coord -> Char -> M.Map Coord Char -> Bool
   isThatChar c ch m = case M.lookup c m of
                        Nothing -> False
@@ -381,10 +395,6 @@ module Main where
       's' -> return (Dir Down)
       'a' -> return (Dir Left)
       'd' -> return (Dir Right)
-      'k' -> return (Dir Up)
-      'j' -> return (Dir Down)
-      'h' -> return (Dir Left)
-      'l' -> return (Dir Right)
       'o' -> return (PlayerAction OpenDoor)
       'c' -> return (PlayerAction CloseDoor)
       ',' -> return (PlayerAction PickUp)
@@ -396,6 +406,7 @@ module Main where
       'z' -> return (PlayerAction Quaff)
       ' ' -> return (PlayerAction Inspect)
       'b' -> return (PlayerAction Buy)
+      'k' -> return (PlayerAction Kick)
       '\t' -> return (PlayerAction Debug)
       _  -> getInput
 
@@ -542,8 +553,25 @@ module Main where
     let newHero = (_wHero w) { _items = (_items (_wHero w)) ++ [getItem i], _hScore = (_hScore (_wHero w)) + (if i == '$' then 10 else 1), _hMoney = (_hMoney (_wHero w)) - (case M.lookup (flipCoord (_hCoord (_wHero w)), _currentLvl w) (_wShops w) of { Nothing -> 0; Just (_, p) -> p })}
     if (isAShopItem w (flipCoord (_hCoord (_wHero w))) (_currentLvl w)) then gameLoop w { _tileMap = changeTile (flipCoord (_hCoord (_wHero w))) i ' ' (_tileMap w), _wHero = if i == ' ' then (_wHero w) else newHero } else gameLoop w  
   handleEvent w (PlayerAction Debug) = do
-    debug (show $ (_hCoord (_wHero w)))
     gameLoop w
+  handleEvent w (PlayerAction Kick) = do
+    dir <- getInput
+    let t = case dir of
+             Dir Right -> (0, 1) |+| (flipCoord (_hCoord (_wHero w)) |+| rConst)
+             Dir Left -> (0, -1) |+| (flipCoord (_hCoord (_wHero w)) |+| lConst)
+             Dir Up -> (-1, 0) |+| (flipCoord (_hCoord (_wHero w)) |+| uConst)
+             Dir Down -> (1, 0) |+| (flipCoord (_hCoord (_wHero w)) |+| dConst)
+             _ -> (_hCoord (_wHero w))
+    let eShove = case dir of
+                  Dir Right -> (-1, 0)
+                  Dir Left -> (1, 1)
+                  Dir Up -> (0, -1)
+                  Dir Down -> (0, 1)
+                  _ -> (0, 0)
+    let hitE = if null (filter (\e -> _eCoord e == t) (_currEnemies w)) then Enemy { _eHealth = 1, _eCoord = (1000, 1000), _eOldCoord = (1001, 1001) } else head $ filter (\e -> _eCoord e == t) (_currEnemies w)
+    let without = delete hitE (_currEnemies w)
+    let withNew = without ++ [(hitE) { _eHealth = (_eHealth (hitE)) - 1, _eCoord = (_eCoord (hitE)) |-| eShove, _eOldCoord = (1000, 1000) }]
+    gameLoop w { _currEnemies = withNew }
 
   gameLoop :: World -> IO ()
   gameLoop w = do
