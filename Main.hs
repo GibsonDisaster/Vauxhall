@@ -45,7 +45,7 @@ module Main where
     [] Boss at the end called "The Relayer"
     [] Clean up code!!!!
     [] Make attributes matter
-    [] Kick function (doors, enemies)
+    [X] Kick function (enemies)
     [] Save system
     [] Spells
     [] Make moving quicker
@@ -407,6 +407,7 @@ module Main where
       ' ' -> return (PlayerAction Inspect)
       'b' -> return (PlayerAction Buy)
       'k' -> return (PlayerAction Kick)
+      'S' -> return (PlayerAction Save)
       '\t' -> return (PlayerAction Debug)
       _  -> getInput
 
@@ -572,6 +573,18 @@ module Main where
     let without = delete hitE (_currEnemies w)
     let withNew = without ++ [(hitE) { _eHealth = (_eHealth (hitE)) - 1, _eCoord = (_eCoord (hitE)) |-| eShove, _eOldCoord = (1000, 1000) }]
     gameLoop w { _currEnemies = withNew }
+  handleEvent w (PlayerAction Save) = do
+    clearScreen
+    setCursorPosition 0 0
+    handle <- openFile "savegame.txt" ReadWriteMode
+    putStrLn "Would you like to save? (y/n): "
+    d <- getChar
+    case d of
+      'y' -> hPutStr handle (show w)
+      _ -> return ()
+    putStr "Done saving press any key to continue"
+    _ <- getInput
+    gameLoop w
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -710,6 +723,9 @@ module Main where
     argLength <- length <$> getArgs
     name <- if argLength > 0 then head <$> getArgs else return "Moz"
     mode <- if argLength > 1 then (head . drop 1) <$> getArgs else return "ascii"
+    putStrLn "Load a previous game? (y/n): "
+    handle <- openFile "savegame.txt" ReadWriteMode
+    shoudLoad <- getChar
     clearScreen
     setCursorPosition 0 0
     mapM_ (\s -> putStrLn s) titleStrings
@@ -732,5 +748,8 @@ module Main where
                    _wShops = shopList,
                    _wTraps = trapsList
                   }
-    if mode == "ascii" then drawWorld w else drawWorldUnicode w
-    gameLoop w
+    readSave <- hGetContents handle
+    let loadedWorld = read readSave :: World
+    if mode == "ascii" then drawWorld (if shoudLoad == 'y' then loadedWorld else w) else drawWorldUnicode (if shoudLoad == 'y' then loadedWorld else w)
+    gameLoop (if shoudLoad == 'y' then loadedWorld else w)
+    hClose handle

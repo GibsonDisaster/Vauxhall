@@ -6,15 +6,15 @@ module Types where
 
   type Coord = (Int, Int)
 
-  data Item = Potion | Coin | Null deriving Eq
+  data Item = Potion | Coin | Null deriving (Eq, Read, Show)
   
-  data Direction = Up | Down | Left | Right | Stay deriving Show
+  data Direction = Up | Down | Left | Right | Stay deriving (Show, Read)
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Debug deriving Show
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Save | Debug deriving (Show, Read)
 
-  data Event = Dir Direction | Exit | PlayerAction Action deriving Show
+  data Event = Dir Direction | Exit | PlayerAction Action deriving (Show, Read)
   
-  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | None deriving (Eq)
+  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | None deriving (Eq, Read, Show)
 
   data Class = Knight {
                 _kConst :: Int,
@@ -42,7 +42,7 @@ module Types where
                  _pStr :: Int,
                  _pDex :: Int,
                  _pInt :: Int
-               } deriving Eq
+               } deriving (Eq, Read, Show)
 
   data World = World {
                 _mode :: String,
@@ -57,13 +57,13 @@ module Types where
                 _wInspects :: M.Map (Coord, String) [String],
                 _wShops :: M.Map (Coord, String) (Item, Int),
                 _wTraps :: M.Map String [Trap]
-               } deriving Show
+               } deriving (Show, Read)
 
   data Enemy = Enemy {
                 _eCoord :: Coord,
                 _eOldCoord :: Coord,
                 _eHealth :: Int
-               } deriving (Show, Eq)
+               } deriving (Show, Eq, Read)
 
   data Hero = Hero {
                 _hName :: String,
@@ -78,35 +78,37 @@ module Types where
                 _hScore :: Int,
                 _hMoney :: Int,
                 _hEffects :: [Effect]
-              } deriving Show
+              } deriving (Show, Read)
 
   data Staircase = Staircase {
                     _sDir :: Char,
                     _sDest :: String,
                     _sCoord :: Coord
-                   } deriving Show
+                   } deriving (Show, Read)
 
   data Trap = Trap {
                 _tEffect :: Effect,
                 _tCoord :: Coord,
                 _tDuration :: Int
-              } deriving Show
+              } deriving (Show, Read)
 
-  instance Show Class where
-    show (Knight _ _ _ _) = "Knight"
-    show (Thief _ _ _ _) = "Thief"
-    show (Sub _ _ _ _) = "Sub"
-    show (PolkaKing _ _ _ _) = "Polka King"
+  {- Will need to implement custom Read class as well to use these -}
 
-  instance Show Item where
-    show Potion = "Potion"
-    show Coin = "Coin"
-    show Null = "Null"
+  -- instance Show Class where
+  --   show (Knight _ _ _ _) = "Knight"
+  --   show (Thief _ _ _ _) = "Thief"
+  --   show (Sub _ _ _ _) = "Sub"
+  --   show (PolkaKing _ _ _ _) = "Polka King"
 
-  instance Show Effect where
-    show None = ""
-    show (Dmg d) = "Dmg " ++ (show d) ++ "t"
-    show (Psn d) = "Psn " ++ (show d) ++ "t"
+  -- instance Show Item where
+  --   show Potion = "Potion"
+  --   show Coin = "Coin"
+  --   show Null = "Null"
+
+  -- instance Show Effect where
+  --   show None = ""
+  --   show (Dmg d) = "Dmg " ++ (show d) ++ "t"
+  --   show (Psn d) = "Psn " ++ (show d) ++ "t"
 
   makeLenses ''World
   makeLenses ''Enemy
