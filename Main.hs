@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ForeignFunctionInterface #-}
 
 module Main where
   import Prelude hiding (Either(..))
@@ -9,6 +9,8 @@ module Main where
   import System.Random
   import System.Environment (getArgs)
   import qualified Data.Map.Strict as M
+  import Foreign.C.Types
+  import Data.Char
   import Types
 
   {- Written By Henning Tonko ☭ -}
@@ -272,6 +274,10 @@ module Main where
   isOkToPlace m = filter (\(_, ch) -> ch == ' ') m'
     where
       m' = M.toList m
+
+  _getChar = fmap (chr.fromEnum) c_getch
+  foreign import ccall unsafe "conio.h getch" --Must be implemented for windows version only (damn it windows)
+    c_getch :: IO CInt
 
   {- Spawn items in any blank tiles -}
   
