@@ -10,11 +10,11 @@ module Types where
   
   data Direction = Up | Down | Left | Right | Stay deriving (Show, Read)
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Save | Debug deriving (Show, Read)
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Save | CastSpell | Rush | Debug deriving (Show, Read)
 
   data Event = Dir Direction | Exit | PlayerAction Action deriving (Show, Read)
   
-  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | None deriving (Eq, Read, Show)
+  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | Slp { _eDur :: Int } | None deriving (Eq, Read, Show)
 
   data Class = Knight {
                 _kConst :: Int,
@@ -56,7 +56,8 @@ module Types where
                 _wStairs :: M.Map String [Staircase],
                 _wInspects :: M.Map (Coord, String) [String],
                 _wShops :: M.Map (Coord, String) (Item, Int),
-                _wTraps :: M.Map String [Trap]
+                _wTraps :: M.Map String [Trap],
+                _wCurrFounts :: [Fountain]
                } deriving (Show, Read)
 
   data Enemy = Enemy {
@@ -77,7 +78,8 @@ module Types where
                 _items :: [Item],
                 _hScore :: Int,
                 _hMoney :: Int,
-                _hEffects :: [Effect]
+                _hEffects :: [Effect],
+                _hSpells :: [Spell]
               } deriving (Show, Read)
 
   data Staircase = Staircase {
@@ -91,6 +93,19 @@ module Types where
                 _tCoord :: Coord,
                 _tDuration :: Int
               } deriving (Show, Read)
+
+  data Spell = Spell {
+                _spCoord :: Coord,
+                _spEffect :: Effect,
+                _spDir :: Direction
+               } deriving (Show, Read)
+
+               
+  data Fountain = Fountain {
+                    _fCoord :: Coord,
+                    _fEffect :: Effect,
+                    _fQuaffed :: Bool
+                  } deriving (Show, Read)
 
   {- Will need to implement custom Read class as well to use these -}
 

@@ -1,16 +1,14 @@
-{-# LANGUAGE TemplateHaskell, ForeignFunctionInterface #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
-  import Prelude hiding (Either(..), getChar)
+  import Prelude hiding (Either(..))
   import Data.List (delete)
   import Control.Lens hiding (getConst)
   import System.Console.ANSI
-  import System.IO hiding (getChar)
+  import System.IO
   import System.Random
   import System.Environment (getArgs)
   import qualified Data.Map.Strict as M
-  import Data.Char
-  import Foreign.C.Types
   import Types
 
   {- Written By Henning Tonko ☭ -}
@@ -48,8 +46,9 @@ module Main where
     [] Clean up code!!!!
     [] Make attributes matter
     [X] Kick function (enemies)
-    [] Save system
-    [] Spells
+    [X] Save system
+    [X] Spells
+    [] Add applyEffects function (World -> [Effect] -> World)
     [] Make moving quicker
     [] More items?
     [] Fountains?
@@ -57,10 +56,6 @@ module Main where
     [] Add a story?
     [] Color code sprites depending on health
   -}
-  
-  getChar = fmap (chr.fromEnum) c_getch
-  foreign import ccall unsafe "conio.h getch"
-    c_getch :: IO CInt
 
   titleStrings :: [String]
   titleStrings =  [ "                                        ",
@@ -80,7 +75,7 @@ module Main where
   wall1 :: [String]
   wall1 = ["-----------------------     ----------",
            "|                     |     |        |",
-           "|                     ---|---        |",
+           "|X                    ---|---        |",
            "|                        +           |",
            "|                     ---|---        |",
            "|                     |     |        |",
@@ -178,6 +173,15 @@ module Main where
   getHeroName :: World -> String
   getHeroName = view (wHero . hName)
 
+  getHeroSpells :: World -> [Spell]
+  getHeroSpells = view (wHero . hSpells)
+
+  addToHeroInv :: Hero -> [Item] -> Hero
+  addToHeroInv h il = over items (++ il) h
+
+  addToHeroSpells :: Hero -> Spell -> Hero
+  addToHeroSpells h s = over hSpells (++ [s]) h
+
   {-
 
   Constants that must be used when determining a position
@@ -240,6 +244,17 @@ module Main where
                                      'I' -> True
                                      _ -> False
 
+  getJumpLoc :: M.Map Coord Char -> Coord -> Coord
+  getJumpLoc m c = flipCoord $ fst (head (getLongestSeq openSpots (fst (head openSpots))))
+    where
+      openSpots = filter (\(coord, ch) -> (snd (c) == snd (coord)) && ch == ' ') (M.toList m)
+  
+  getLongestSeq :: [(Coord, Char)] -> Coord -> [(Coord, Char)]
+  getLongestSeq ls c
+    | null ls = []
+    | (fst (fst (head ls))) == (fst c) = [head ls] ++ getLongestSeq (tail ls) ((fst (head ls) |+| (0, 1)))
+    | otherwise = []
+
   getTrapTile :: World -> Coord -> Effect
   getTrapTile w c = if (length trap) > 0 then _tEffect (head trap) else None
     where
@@ -268,6 +283,14 @@ module Main where
     let spawnedItems = map (\((x, y), _) -> ((x, y), i)) placeOfItems -- [Coord, Item]
     return spawnedItems
 
+  spawnFountain :: M.Map Coord Char -> IO [Fountain]
+  spawnFountain m = do
+    let okSpots = isOkToPlace m
+    n <- randChoice [1..1]
+    (fc, _) <- randChoice okSpots
+    fe <- randChoice [Dmg 10, Psn 10, Slp 10]
+    if n == 1 then return [Fountain fc fe False] else return []
+
   findEnemyByCoord :: [Enemy] -> Coord -> Maybe Enemy
   findEnemyByCoord es c
     | length es == 0 = Nothing
@@ -276,16 +299,6 @@ module Main where
     | otherwise = findEnemyByCoord (tail es) c
       where
         dummy = Enemy { _eCoord = c, _eOldCoord = (1, 1), _eHealth = 10 }
-
-  getNextLvl :: String -> String
-  getNextLvl lvl = "wall" ++ show nextNum
-    where
-      nextNum = (read (drop 4 lvl) :: Int) + 1
-
-  getLastLvl :: String -> String
-  getLastLvl lvl = "wall" ++ show lastNum
-    where
-      lastNum = (read (drop 4 lvl) :: Int) - 1
 
   {- Next 3 functions are used to create a coordinate map to chars from a given list of strings -}
 
@@ -414,6 +427,8 @@ module Main where
       'b' -> return (PlayerAction Buy)
       'k' -> return (PlayerAction Kick)
       'S' -> return (PlayerAction Save)
+      'C' -> return (PlayerAction CastSpell)
+      '.' -> return (PlayerAction Rush)
       '\t' -> return (PlayerAction Debug)
       _  -> getInput
 
@@ -515,9 +530,10 @@ module Main where
                        Just es -> es
     num <- randomRIO (1, 5)
     is <- spawnItems (mapWalls nextWalls) num
+    fs <- spawnFountain (mapWalls (nextWalls))
     let w' = w { _walls = (nextWalls), _currentLvl = nextStr, _tileMap = mapWalls nextWalls, _currEnemies = nextEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) }
-    let w'' = w' { _wItems = M.fromList is }
-    gameLoop w'
+    let w'' = w' { _wItems = M.fromList is, _wCurrFounts = fs }
+    gameLoop w''
   handleEvent w (PlayerAction GoUp) = do
     let t = case M.lookup (_currentLvl w) (_wStairs w) of
               Nothing -> []
@@ -531,8 +547,9 @@ module Main where
                        Nothing -> (_currEnemies w)
                        Just es -> es
     is <- spawnItems (mapWalls lastWalls) 5
+    fs <- spawnFountain (mapWalls (lastWalls))
     let w' = w { _walls = (lastWalls), _currentLvl = nextStr, _tileMap = mapWalls lastWalls, _currEnemies = lastEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) }
-    let w'' = w' { _wItems = M.fromList is }
+    let w'' = w' { _wItems = M.fromList is, _wCurrFounts = fs }
     gameLoop w''
   handleEvent w (PlayerAction Rest) = do
     h <- randChoice [1, 2, 0, 0, 0, 0, 0, 4, 0]
@@ -541,9 +558,11 @@ module Main where
     let h = (_wHero w)
     let inv = (_items h)
     let maxHealth = (getConst (_hClass h)) + 10
-    let w' = if (Potion  `elem` inv) then (if (((_hHealth h) + 10) >= maxHealth) then w { _wHero = h { _hHealth = maxHealth } } else w { _wHero = h { _hHealth = (_hHealth h) + 10 } }) else w
-    let w'' = w' { _wHero = (_wHero w') { _items = delete Potion (_items (_wHero w')) } }
-    gameLoop w''
+    let onFount = length (filter (\f -> _fCoord f == flipCoord (_hCoord (_wHero w))) (_wCurrFounts w)) > 0
+    debug (show onFount)
+    let w' = if (Potion  `elem` inv) then (if (((_hHealth h) + 10) >= maxHealth) then w { _wHero = h { _hHealth = maxHealth, _items = delete Potion (_items (_wHero w')) } } else w { _wHero = h { _hHealth = (_hHealth h) + 10, _items = delete Potion (_items (_wHero w')) } }) else w
+    let w'' = if (_fQuaffed (head (_wCurrFounts w))) then w' else w' { _wCurrFounts =  [Fountain (_fCoord (head (_wCurrFounts w))) (_fEffect (head (_wCurrFounts w))) True], _wHero = (_wHero w) { _hEffects = (_hEffects (_wHero w)) ++ [(_fEffect (head (_wCurrFounts w)))] } }
+    if onFount then gameLoop w'' else gameLoop w'
   handleEvent w (PlayerAction Inspect) = do
     let t = case M.lookup ((flipCoord (_hCoord (_wHero w))), _currentLvl w) (_wInspects w) of {Just xs -> xs; Nothing -> [""]}
     clearScreen
@@ -560,6 +579,7 @@ module Main where
     let newHero = (_wHero w) { _items = (_items (_wHero w)) ++ [getItem i], _hScore = (_hScore (_wHero w)) + (if i == '$' then 10 else 1), _hMoney = (_hMoney (_wHero w)) - (case M.lookup (flipCoord (_hCoord (_wHero w)), _currentLvl w) (_wShops w) of { Nothing -> 0; Just (_, p) -> p })}
     if (isAShopItem w (flipCoord (_hCoord (_wHero w))) (_currentLvl w)) then gameLoop w { _tileMap = changeTile (flipCoord (_hCoord (_wHero w))) i ' ' (_tileMap w), _wHero = if i == ' ' then (_wHero w) else newHero } else gameLoop w  
   handleEvent w (PlayerAction Debug) = do
+    debug (show (_wCurrFounts w))
     gameLoop w
   handleEvent w (PlayerAction Kick) = do
     dir <- getInput
@@ -577,7 +597,7 @@ module Main where
                   _ -> (0, 0)
     let hitE = if null (filter (\e -> _eCoord e == t) (_currEnemies w)) then Enemy { _eHealth = 1, _eCoord = (1000, 1000), _eOldCoord = (1001, 1001) } else head $ filter (\e -> _eCoord e == t) (_currEnemies w)
     let without = delete hitE (_currEnemies w)
-    let withNew = without ++ [(hitE) { _eHealth = (_eHealth (hitE)) - 1, _eCoord = (_eCoord (hitE)) |-| eShove, _eOldCoord = (1000, 1000) }]
+    let withNew = without ++ [(hitE) { _eHealth = (_eHealth (hitE)), _eCoord = (_eCoord (hitE)) |-| eShove, _eOldCoord = (1000, 1000) }]
     gameLoop w { _currEnemies = withNew }
   handleEvent w (PlayerAction Save) = do
     clearScreen
@@ -590,18 +610,58 @@ module Main where
       _ -> return ()
     putStr "Done saving press any key to continue"
     _ <- getInput
-    hClose handle
     gameLoop w
+  handleEvent w (PlayerAction CastSpell) = do
+    setCursorPosition 0 0
+    putStrLn "Which spell would you like to cast?"
+    putStrLn "*---------------------------------*"
+    mapM_ putStrLn ["a - Dmg", "b - Psn", "c - Slp", "d - Cancel casting"]
+    c <- getChar
+    let sp = case c of
+              'a' -> Spell (_hCoord (_wHero w)) (Dmg 2) Up
+              'b' -> Spell (_hCoord (_wHero w)) (Psn 2) Up
+              'c' -> Spell (_hCoord (_wHero w)) (Slp 2) Up
+              _ -> Spell (_hCoord (_wHero w)) None Up
+    putStrLn "Choose a direction"
+    d <- getInput
+    let sp' = case d of
+                (Dir Up) -> sp { _spDir = Up }
+                (Dir Down) -> sp { _spDir = Down }
+                (Dir Left) -> sp { _spDir = Left }
+                (Dir Right) -> sp { _spDir = Right }
+                _ -> sp
+    if _spEffect sp' == None then gameLoop w else gameLoop w { _wHero = addToHeroSpells (_wHero w) sp' }
+  handleEvent w (PlayerAction Rush) = do
+    let newC = getJumpLoc (_tileMap w) (flipCoord $ _hCoord (_wHero w))
+    debug (show newC)
+    gameLoop w { _wHero = (_wHero w) { _hCoord = newC } }
 
   gameLoop :: World -> IO ()
   gameLoop w = do
     if (_mode w) == "ascii" then drawWorld w else drawWorldUnicode w
     let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if getHeroName w == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))), _hEffects = map (\e -> e { _eDur = (_eDur e) - 1 }) (filter (\e -> (_eDur e) > 0) ((filter (\e -> e /= None) (_hEffects (_wHero w))))) }, _currEnemies = deadEnemies (_currEnemies w) }
-    if (_hHealth (_wHero w)) <= 0 then handleExit w else return ()
+    let w'' = w' --applyEffects w' (_hEffects (_wHero w'))
+    w''s <- checkSpellBounds w'' (updateSpells w'')
+    if (_hHealth (_wHero w''s)) <= 0 then handleExit w''s else return ()
     event <- getInput
     case event of
-      Exit -> handleExit w'
-      e -> handleEvent w' e
+      Exit -> handleExit w''s
+      e -> handleEvent w''s e
+
+  checkSpellBounds :: World -> [Spell] -> IO World
+  checkSpellBounds w sl = do
+    let checkedSpells = [ s | s <- sl, e <- (_currEnemies w), (_spCoord s) /= (_eCoord e) ]
+    let checkedEnemies = [e { _eHealth = (_eHealth e) - 1 } | s <- sl, e <- (_currEnemies w), (_spCoord s) == (_eCoord e) ]
+    return (w { _wHero = (_wHero w) { _hSpells = checkedSpells }, _currEnemies = checkedEnemies } )
+
+  updateSpells :: World -> [Spell]
+  updateSpells w = map (\s -> s { _spCoord = (_spCoord s) |+| (getDir' (_spDir s)) } ) (getHeroSpells w)
+    where
+      getDir' d = case d of
+                   Left -> (0, -1)
+                   Right -> (0, 1)
+                   Up -> (-1, 0)
+                   Down -> (1, 0)
 
   drawMap :: M.Map Coord Char -> IO ()
   drawMap m = mapM_ (\((x, y), c) -> do {setCursorPosition y x; putChar c}) l
@@ -632,6 +692,9 @@ module Main where
     mapM_ (\((x, y), i) -> do { setCursorPosition y x; putChar (getTile i)}) m
     where
       getTile i = case i of { Potion -> 'p'; Coin -> '$' }
+
+  drawFounts :: [Fountain] -> IO ()
+  drawFounts = mapM_ (\f -> do { setCursorPosition (snd (_fCoord f)) (fst (_fCoord f)); putChar '}' } )
     
   drawStats :: Hero -> IO ()
   drawStats h = do
@@ -674,6 +737,10 @@ module Main where
               Just t -> t
     mapM_ (\t' -> do { setCursorPosition (fst (_tCoord t')) (snd (_tCoord t')); putChar '^' }) ts
 
+  drawSpells :: World -> IO ()
+  drawSpells w = do
+    mapM_ (\s -> do { setCursorPosition (fst (_spCoord s)) (snd (_spCoord s)); putChar '*' }) (getHeroSpells w)
+  
   drawWorldUnicode :: World -> IO ()
   drawWorldUnicode w = do
     setSGR [SetColor Foreground Vivid White]
@@ -683,6 +750,7 @@ module Main where
     drawItemsUnicode (M.toList $ _wItems w)
     drawStairs w
     drawTraps w
+    drawFounts (_wCurrFounts w)
     setCursorPosition (fst $ _hCoord (_wHero w)) (snd $ _hCoord (_wHero w))
     setSGR [SetColor Foreground Vivid Red]
     if getHeroName w == "JanLawen" then putStr "💃" else putChar '@'
@@ -698,6 +766,8 @@ module Main where
     drawItems (M.toList $ _wItems w)
     drawStairs w
     drawTraps w
+    drawSpells w
+    drawFounts (_wCurrFounts w)
     setCursorPosition (fst $ _hCoord (_wHero w)) (snd $ _hCoord (_wHero w))
     putChar '@'
     setCursorPosition 0 0
@@ -743,7 +813,7 @@ module Main where
     is <- spawnItems (mapWalls wall1) 5
     let w = World {
                    _mode = mode, 
-                   _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0), _hEffects = [] }, 
+                   _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0), _hEffects = [], _hSpells = [] }, 
                    _walls = wall1,
                    _currentLvl = "wall1",
                    _tileMap = mapWalls wall1,
@@ -753,10 +823,11 @@ module Main where
                    _wStairs = stairsList,
                    _wInspects = inspectList,
                    _wShops = shopList,
-                   _wTraps = trapsList
+                   _wTraps = trapsList,
+                   _wCurrFounts = [Fountain (10, 3) (Dmg 10) False]
                   }
     readSave <- hGetContents handle
+    hClose handle
     let loadedWorld = read readSave :: World
     if mode == "ascii" then drawWorld (if shoudLoad == 'y' then loadedWorld else w) else drawWorldUnicode (if shoudLoad == 'y' then loadedWorld else w)
     gameLoop (if shoudLoad == 'y' then loadedWorld else w)
-    hClose handle
