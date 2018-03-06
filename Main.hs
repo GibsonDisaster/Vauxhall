@@ -1,14 +1,16 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, ForeignFunctionInterface #-}
 
 module Main where
-  import Prelude hiding (Either(..))
+  import Prelude hiding (Either(..), getChar)
   import Data.List (delete)
   import Control.Lens hiding (getConst)
   import System.Console.ANSI
-  import System.IO
+  import System.IO hiding (getChar)
   import System.Random
   import System.Environment (getArgs)
   import qualified Data.Map.Strict as M
+  import Data.Char
+  import Foreign.C.Types
   import Types
 
   {- Written By Henning Tonko ☭ -}
@@ -55,6 +57,10 @@ module Main where
     [] Add a story?
     [] Color code sprites depending on health
   -}
+  
+  getChar = fmap (chr.fromEnum) c_getch
+  foreign import ccall unsafe "conio.h getch"
+    c_getch :: IO CInt
 
   titleStrings :: [String]
   titleStrings =  [ "                                        ",
@@ -584,6 +590,7 @@ module Main where
       _ -> return ()
     putStr "Done saving press any key to continue"
     _ <- getInput
+    hClose handle
     gameLoop w
 
   gameLoop :: World -> IO ()
