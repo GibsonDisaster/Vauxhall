@@ -1,20 +1,22 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveGeneric #-}
 
 module Types where
   import qualified Data.Map as M
   import Control.Lens hiding (getConst)
+  import Data.Binary
+  import GHC.Generics (Generic)
 
   type Coord = (Int, Int)
 
-  data Item = Potion | Coin | Null deriving (Eq, Read, Show)
+  data Item = Potion | Coin | Null deriving (Eq, Read, Show, Generic)
   
-  data Direction = Up | Down | Left | Right | Stay deriving (Show, Read)
+  data Direction = Up | Down | Left | Right | Stay deriving (Show, Read, Generic)
 
-  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Save | CastSpell | Rush | Debug deriving (Show, Read)
+  data Action = OpenDoor | CloseDoor | PickUp | DropItem | Rest | ShowInv | ShowStats | Idle | GoDown | GoUp | Quaff | Inspect | Buy | Kick | Save | CastSpell | Rush | Help | Debug deriving (Show, Read, Generic)
 
-  data Event = Dir Direction | Exit | PlayerAction Action deriving (Show, Read)
+  data Event = Dir Direction | Exit | PlayerAction Action deriving (Show, Read, Generic)
   
-  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | Slp { _eDur :: Int } | None deriving (Eq, Read, Show)
+  data Effect = Dmg { _eDur :: Int } | Psn { _eDur :: Int } | Slp { _eDur :: Int } | None deriving (Eq, Read, Show, Generic)
 
   data Class = Knight {
                 _kConst :: Int,
@@ -42,7 +44,7 @@ module Types where
                  _pStr :: Int,
                  _pDex :: Int,
                  _pInt :: Int
-               } deriving (Eq, Read, Show)
+               } deriving (Eq, Read, Show, Generic)
 
   data World = World {
                 _mode :: String,
@@ -58,13 +60,13 @@ module Types where
                 _wShops :: M.Map (Coord, String) (Item, Int),
                 _wTraps :: M.Map String [Trap],
                 _wCurrFounts :: [Fountain]
-               } deriving (Show, Read)
+               } deriving (Show, Read, Generic)
 
   data Enemy = Enemy {
                 _eCoord :: Coord,
                 _eOldCoord :: Coord,
                 _eHealth :: Int
-               } deriving (Show, Eq, Read)
+               } deriving (Show, Eq, Read, Generic)
 
   data Hero = Hero {
                 _hName :: String,
@@ -80,32 +82,32 @@ module Types where
                 _hMoney :: Int,
                 _hEffects :: [Effect],
                 _hSpells :: [Spell]
-              } deriving (Show, Read)
+              } deriving (Show, Read, Generic)
 
   data Staircase = Staircase {
                     _sDir :: Char,
                     _sDest :: String,
                     _sCoord :: Coord
-                   } deriving (Show, Read)
+                   } deriving (Show, Read, Generic)
 
   data Trap = Trap {
                 _tEffect :: Effect,
                 _tCoord :: Coord,
                 _tDuration :: Int
-              } deriving (Show, Read)
+              } deriving (Show, Read, Generic)
 
   data Spell = Spell {
                 _spCoord :: Coord,
                 _spEffect :: Effect,
                 _spDir :: Direction
-               } deriving (Show, Read)
+               } deriving (Show, Read, Generic)
 
                
   data Fountain = Fountain {
                     _fCoord :: Coord,
                     _fEffect :: Effect,
                     _fQuaffed :: Bool
-                  } deriving (Show, Read)
+                  } deriving (Show, Read, Generic)
 
   {- Will need to implement custom Read class as well to use these -}
 
@@ -124,6 +126,20 @@ module Types where
   --   show None = ""
   --   show (Dmg d) = "Dmg " ++ (show d) ++ "t"
   --   show (Psn d) = "Psn " ++ (show d) ++ "t"
+
+  instance Binary Item
+  instance Binary Direction
+  instance Binary Action
+  instance Binary Event
+  instance Binary Effect
+  instance Binary Class
+  instance Binary World
+  instance Binary Enemy
+  instance Binary Hero
+  instance Binary Staircase
+  instance Binary Trap
+  instance Binary Spell
+  instance Binary Fountain
 
   makeLenses ''World
   makeLenses ''Enemy

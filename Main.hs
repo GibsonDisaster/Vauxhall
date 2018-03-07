@@ -9,8 +9,11 @@ module Main where
   import System.Random
   import System.Environment (getArgs)
   import qualified Data.Map.Strict as M
+  import qualified Data.ByteString.Lazy as D
+  import qualified Data.ByteString.Char8 as P
   import Foreign.C.Types
   import Data.Char
+  import Data.Binary
   import Types
 
   {- Written By Henning Tonko ☭ -}
@@ -57,6 +60,7 @@ module Main where
     [] Implement more effects
     [] Add a story?
     [] Color code sprites depending on health
+    [X] Binary Serializing of World Data Type !!!!!
   -}
 
   titleStrings :: [String]
@@ -435,6 +439,7 @@ module Main where
       'S' -> return (PlayerAction Save)
       'C' -> return (PlayerAction CastSpell)
       '.' -> return (PlayerAction Rush)
+      '?' -> return (PlayerAction Help)
       '\t' -> return (PlayerAction Debug)
       _  -> getInput
 
@@ -608,11 +613,10 @@ module Main where
   handleEvent w (PlayerAction Save) = do
     clearScreen
     setCursorPosition 0 0
-    handle <- openFile "savegame.txt" ReadWriteMode
     putStrLn "Would you like to save? (y/n): "
     d <- getChar
     case d of
-      'y' -> hPutStr handle (show w)
+      'y' -> D.writeFile "savegame" (encode w)
       _ -> return ()
     putStr "Done saving press any key to continue"
     _ <- getInput
@@ -641,6 +645,14 @@ module Main where
     let newC = getJumpLoc (_tileMap w) (flipCoord $ _hCoord (_wHero w))
     debug (show newC)
     gameLoop w { _wHero = (_wHero w) { _hCoord = newC } }
+  handleEvent w (PlayerAction Help) = do
+    clearScreen
+    putStrLn "* Commands *"
+    putStrLn "------------"
+    mapM_ putStrLn ["wasd - Move", ", - Pick up item", "o + direction key - open door in specified direction"]
+    _ <- getChar
+    clearScreen
+    gameLoop w
 
   gameLoop :: World -> IO ()
   gameLoop w = do
@@ -807,7 +819,6 @@ module Main where
     name <- if argLength > 0 then head <$> getArgs else return "Moz"
     mode <- if argLength > 1 then (head . drop 1) <$> getArgs else return "ascii"
     putStrLn "Load a previous game? (y/n): "
-    handle <- openFile "savegame.txt" ReadWriteMode
     shoudLoad <- getChar
     clearScreen
     setCursorPosition 0 0
@@ -832,8 +843,10 @@ module Main where
                    _wTraps = trapsList,
                    _wCurrFounts = [Fountain (10, 3) (Dmg 10) False]
                   }
-    readSave <- hGetContents handle
-    hClose handle
-    let loadedWorld = read readSave :: World
+    readSave <- D.readFile "savegame"
+    setCursorPosition 1000 10000
+    D.putStr (readSave)
+    clearScreen
+    let loadedWorld = decode readSave :: World
     if mode == "ascii" then drawWorld (if shoudLoad == 'y' then loadedWorld else w) else drawWorldUnicode (if shoudLoad == 'y' then loadedWorld else w)
     gameLoop (if shoudLoad == 'y' then loadedWorld else w)
