@@ -49,6 +49,8 @@ module Main where
     [] Make it FUN!!!!
     [] Boss at the end called "The Relayer"
     [] Clean up code!!!!
+       - Clean up main function
+       - Make more lens functions
     [] Make attributes matter
     [X] Kick function (enemies)
     [X] Save system
@@ -60,6 +62,7 @@ module Main where
     [] Implement more effects
     [] Add a story?
     [] Color code sprites depending on health
+    [] Add more cmds to help screen
     [X] Binary Serializing of World Data Type !!!!!
   -}
 
@@ -557,7 +560,8 @@ module Main where
     let lastEnemies = case M.lookup nextStr (_wEnemies w) of
                        Nothing -> (_currEnemies w)
                        Just es -> es
-    is <- spawnItems (mapWalls lastWalls) 5
+    num <- randomRIO (1, 5)
+    is <- spawnItems (mapWalls lastWalls) num
     fs <- spawnFountain (mapWalls (lastWalls))
     let w' = w { _walls = (lastWalls), _currentLvl = nextStr, _tileMap = mapWalls lastWalls, _currEnemies = lastEnemies, _wEnemies = M.insert (_currentLvl w) (_currEnemies w) (_wEnemies w) }
     let w'' = w' { _wItems = M.fromList is, _wCurrFounts = fs }
@@ -815,9 +819,11 @@ module Main where
     hSetBuffering stdout NoBuffering
     hideCursor
     setTitle "Vauxhall"
-    argLength <- length <$> getArgs
-    name <- if argLength > 0 then head <$> getArgs else return "Moz"
-    mode <- if argLength > 1 then (head . drop 1) <$> getArgs else return "ascii"
+    args <- getArgs
+    (name, mode) <- case length args of
+                      0 -> return ("Moz", "ascii")
+                      1 -> return (head args, "ascii")
+                      2 -> return (head args, last args)
     putStrLn "Load a previous game? (y/n): "
     shoudLoad <- getChar
     clearScreen
@@ -827,7 +833,8 @@ module Main where
     clearScreen
     c <- getClass name
     clearScreen
-    is <- spawnItems (mapWalls wall1) 5
+    num <- randomRIO (1, 5)
+    is <- spawnItems (mapWalls wall1) num
     let w = World {
                    _mode = mode, 
                    _wHero = Hero {_hName = name, _hCoord = (2, 1), _hOldCoord = (30, 0), _hHealth = 10 + (getConst c), _hDmg = getStr c, _hExp = 0, _hLvl = 1, _hClass = c, _items = [], _hScore = 0, _hMoney = (if name == "JanLawen" then 999 else 0), _hEffects = [], _hSpells = [] }, 
@@ -844,8 +851,8 @@ module Main where
                    _wCurrFounts = [Fountain (10, 3) (Dmg 10) False]
                   }
     readSave <- D.readFile "savegame"
-    setCursorPosition 1000 10000
-    D.putStr (readSave)
+    setCursorPosition 1000 1000
+    D.putStr readSave
     clearScreen
     let loadedWorld = decode readSave :: World
     if mode == "ascii" then drawWorld (if shoudLoad == 'y' then loadedWorld else w) else drawWorldUnicode (if shoudLoad == 'y' then loadedWorld else w)

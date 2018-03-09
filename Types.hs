@@ -3,7 +3,7 @@
 module Types where
   import qualified Data.Map as M
   import Control.Lens hiding (getConst)
-  import Data.Binary
+  import Data.Binary (Binary)
   import GHC.Generics (Generic)
 
   type Coord = (Int, Int)
