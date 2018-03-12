@@ -58,11 +58,11 @@ module Main where
     [] Add applyEffects function (World -> [Effect] -> World)
     [] Make moving quicker
     [] More items?
-    [] Fountains?
+    [X] Fountains?
     [] Implement more effects
     [] Add a story?
     [] Color code sprites depending on health
-    [] Add more cmds to help screen
+    [X] Add more cmds to help screen
     [X] Binary Serializing of World Data Type !!!!!
   -}
 
@@ -185,6 +185,9 @@ module Main where
   getHeroSpells :: World -> [Spell]
   getHeroSpells = view (wHero . hSpells)
 
+  getHeroHealth :: World -> Int
+  getHeroHealth = view (wHero . hHealth)
+
   addToHeroInv :: Hero -> [Item] -> Hero
   addToHeroInv h il = over items (++ il) h
 
@@ -196,6 +199,9 @@ module Main where
   Constants that must be used when determining a position
   because of ANSI's insane coordinate system.
   (I think this might actually be my fault)
+
+  Came across these a few months after writing them. I am an absolute idiot
+  but I'm too afraid to mess everything up by fixing it.
   
   -}
 
@@ -253,10 +259,13 @@ module Main where
                                      'I' -> True
                                      _ -> False
 
-  getJumpLoc :: M.Map Coord Char -> Coord -> Coord
-  getJumpLoc m c = flipCoord $ fst (head (getLongestSeq openSpots (fst (head openSpots))))
+  getJumpLoc :: String -> M.Map Coord Char -> Coord -> Coord
+  getJumpLoc dir m c
+    | dir == "right to left" = flipCoord $ fst (head (getLongestSeq openSpotsRTL (fst (head openSpotsRTL))))
+    | otherwise = flipCoord $ fst (head (getLongestSeq openSpotsLTR (fst (head openSpotsLTR))))
     where
-      openSpots = filter (\(coord, ch) -> (snd (c) == snd (coord)) && ch == ' ') (M.toList m)
+      openSpotsRTL = filter (\(coord, ch) -> (snd (c) == snd (coord)) && ch == ' ') (M.toList m)
+      openSpotsLTR = reverse openSpotsRTL
   
   getLongestSeq :: [(Coord, Char)] -> Coord -> [(Coord, Char)]
   getLongestSeq ls c
@@ -282,9 +291,9 @@ module Main where
     where
       m' = M.toList m
 
-  _getChar = fmap (chr.fromEnum) c_getch
+  _getChar = fmap (chr.fromEnum) c_getch -- Haskells getChar function waits for a \n before it returns the value (which is always a \n) so we have to use the c getChar function on Windows
   foreign import ccall unsafe "conio.h getch" --Must be implemented for windows version only (damn it windows)
-    c_getch :: IO CInt
+    c_getch :: IO CInt -- Do not use if not compiling for Windows
 
   {- Spawn items in any blank tiles -}
   
@@ -646,14 +655,14 @@ module Main where
                 _ -> sp
     if _spEffect sp' == None then gameLoop w else gameLoop w { _wHero = addToHeroSpells (_wHero w) sp' }
   handleEvent w (PlayerAction Rush) = do
-    let newC = getJumpLoc (_tileMap w) (flipCoord $ _hCoord (_wHero w))
+    let newC = getJumpLoc "rigto left" (_tileMap w) (flipCoord $ _hCoord (_wHero w))
     debug (show newC)
     gameLoop w { _wHero = (_wHero w) { _hCoord = newC } }
   handleEvent w (PlayerAction Help) = do
     clearScreen
     putStrLn "* Commands *"
     putStrLn "------------"
-    mapM_ putStrLn ["wasd - Move", ", - Pick up item", "o + direction key - open door in specified direction"]
+    mapM_ putStrLn ["wasd - Move", ", - Pick up item", "o + direction key - open door in specified direction", "c + direction key - close door in specified direction", "i - Displays your current inventory (press another key to close)", "< or > - Goes up or down a floor (respectively) if you are standing on that character", "f - Displays your characters stats", "r - Rests and heals your character", "z - Drinks a potion (healing you) if you have any potions", "space bar - Interacts with a dialogue tile you are standing on, which is marked by a \'?\' on the map", "b - like \',\' but used to buy items in a shop instead of picking them up", "k + a direction key - Kick in given direction (damages enemy and pushes them in opposite direction)", "S (shift + s) - Save your game", "? - display help screen"]
     _ <- getChar
     clearScreen
     gameLoop w

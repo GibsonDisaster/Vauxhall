@@ -22,6 +22,7 @@ Play with your Terminal window in fullscreen to avoid rendering issues
 * 'b' - like ',' but used to buy items in a shop instead of picking them up
 * k + a direction key - Kick in given direction (damages enemy and pushes them in opposite direction)
 * S (shift + s) - Save your game
+* ? - display help screen
 
 # Screenshots
 
