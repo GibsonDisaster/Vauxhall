@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, ForeignFunctionInterface #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 
 module Main where
   import Prelude hiding (Either(..))
@@ -48,20 +48,28 @@ module Main where
         - Picking up gold [X]
     [] Make it FUN!!!!
     [] Boss at the end called "The Relayer"
-    [] Clean up code!!!!
+    [X] Clean up code!!!!
        - Clean up main function
        - Make more lens functions
     [] Make attributes matter
     [X] Kick function (enemies)
     [X] Save system
     [X] Spells
-    [] Add applyEffects function (World -> [Effect] -> World)
+    [X] Add applyEffects function (Hero -> [Effect] -> Hero)
     [] Make moving quicker
+        - Fix the run cmd []
+        - Teleport? []
     [] More items?
     [X] Fountains?
     [] Implement more effects
     [] Add a story?
     [] Color code sprites depending on health
+    [] Different languages (elven, dwarf, human, goblin)
+      - Translation skill []
+      - Used to solve puzzles?
+    [] Way to speed up level creation
+      - GUI to make them and export as [String]?
+      - Templates + commands to add things (followed by a print of new layout), export as [String]
     [X] Add more cmds to help screen
     [X] Binary Serializing of World Data Type !!!!!
   -}
@@ -125,6 +133,23 @@ module Main where
               "|              ?                     |",
               "|                                    |",
               "--------------------------------------"]
+
+  testHero :: Hero
+  testHero = Hero {
+    _hName = "Henning",
+    _hCoord = (0, 0),
+    _hOldCoord = (0, 0),
+    _hHealth = 20,
+    _hDmg = 10,
+    _hExp = 0,
+    _hLvl = 0,
+    _hClass = sub,
+    _items = [],
+    _hScore = 0,
+    _hMoney = 0,
+    _hEffects = [],
+    _hSpells = []
+  }
 
   spawnEnemy :: Coord -> Int -> Enemy
   spawnEnemy c h = Enemy { _eCoord = c, _eOldCoord = (0, 0), _eHealth = h }
@@ -427,6 +452,31 @@ module Main where
     | (_hExp h) >= 20 = h { _hExp = 0, _hLvl = (_hLvl h) + 1 }
     | otherwise = h
 
+  updateEffects :: [Effect] -> [Effect]
+  updateEffects es
+    | null es = []
+    | _eDur (head es) <= 1 = [] ++ updateEffects (tail es)
+    | otherwise = case (head es) of
+                    (Dmg d) -> [Dmg (d - 1)] ++ updateEffects (tail es)
+                    (Psn d) -> [Psn (d - 1)] ++ updateEffects (tail es)
+                    (Slp d) -> [Slp (d - 1)] ++ updateEffects (tail es)
+                    None -> [] ++ updateEffects (tail es)
+
+  applyEffectsToHero :: Hero -> [Effect] -> Hero
+  applyEffectsToHero h es
+    | null es = h
+    | otherwise = case (head es) of
+                    (Dmg d) -> applyEffectsToHero (h { _hHealth = (_hHealth h) - 5 }) (tail es)
+                    (Psn d) -> applyEffectsToHero (h { _hHealth = (_hHealth h) - 2 }) (tail es)
+                    (Slp d) -> applyEffectsToHero h (tail es)
+                    None -> applyEffectsToHero h (tail es)
+
+  applyEffects :: Hero -> [Effect] -> Hero
+  applyEffects h es = h' { _hEffects = updatedEffects }
+    where
+      h' = applyEffectsToHero h es
+      updatedEffects = updateEffects es
+
   getInput :: IO Event
   getInput = do
     char <- getChar
@@ -603,7 +653,7 @@ module Main where
     let newHero = (_wHero w) { _items = (_items (_wHero w)) ++ [getItem i], _hScore = (_hScore (_wHero w)) + (if i == '$' then 10 else 1), _hMoney = (_hMoney (_wHero w)) - (case M.lookup (flipCoord (_hCoord (_wHero w)), _currentLvl w) (_wShops w) of { Nothing -> 0; Just (_, p) -> p })}
     if (isAShopItem w (flipCoord (_hCoord (_wHero w))) (_currentLvl w)) then gameLoop w { _tileMap = changeTile (flipCoord (_hCoord (_wHero w))) i ' ' (_tileMap w), _wHero = if i == ' ' then (_wHero w) else newHero } else gameLoop w  
   handleEvent w (PlayerAction Debug) = do
-    debug (show (_wCurrFounts w))
+    debug (show (_wEnemies w))
     gameLoop w
   handleEvent w (PlayerAction Kick) = do
     dir <- getInput
@@ -671,7 +721,7 @@ module Main where
   gameLoop w = do
     if (_mode w) == "ascii" then drawWorld w else drawWorldUnicode w
     let w' = w { _wHero = (checkLevel (_wHero w)) { _hMoney = (if getHeroName w == "JanLawen" then ((_hMoney (_wHero w)) - 1) else (_hMoney (_wHero w))), _hEffects = map (\e -> e { _eDur = (_eDur e) - 1 }) (filter (\e -> (_eDur e) > 0) ((filter (\e -> e /= None) (_hEffects (_wHero w))))) }, _currEnemies = deadEnemies (_currEnemies w) }
-    let w'' = w' --applyEffects w' (_hEffects (_wHero w'))
+    let w'' = w' { _wHero = applyEffects (_wHero w') (_hEffects (_wHero w')) }
     w''s <- checkSpellBounds w'' (updateSpells w'')
     if (_hHealth (_wHero w''s)) <= 0 then handleExit w''s else return ()
     event <- getInput
